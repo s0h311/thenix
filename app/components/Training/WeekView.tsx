@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { CopyButton } from './CopyButton.tsx'
 import { logFor, noTaps, noteOf, tally, tapOf, withTap } from '../../libs/Training/logging.ts'
 import { asDate, asLoad, asPrescribed, asRest } from '../../libs/Training/notation.ts'
+import { openOn } from '../../libs/Training/opening.ts'
 import type { Logged, Noted, Taps } from '../../libs/Training/logging.ts'
+import type { Picked } from '../../libs/Training/opening.ts'
 import type { ChangeEvent, MouseEvent } from 'react'
 import type { Day, Difficulty, Exercise, Log, Orphan, Week } from '../../../shared/training.ts'
 
@@ -16,9 +18,10 @@ const RATINGS: { difficulty: Difficulty; label: string }[] = [
 export type { Logged, Noted } from '../../libs/Training/logging.ts'
 
 /**
- * The screen the athlete trains from. It opens on today's Day and never navigates
- * away from the Week: the other Days, and the Week's notes, are reachable from here
- * because a PAIN RULE is no use at the top of a document that has scrolled past.
+ * The screen the athlete trains from. It opens on today's Day — or, for a Week off
+ * the shelf that holds no today, on its first — and never navigates away from the
+ * Week: the other Days, and the Week's notes, are reachable from here because a PAIN
+ * RULE is no use at the top of a document that has scrolled past.
  */
 export function WeekView({
   week,
@@ -39,11 +42,18 @@ export function WeekView({
   /** Puts this Week, Logs and all, where the coach can be handed it. */
   onExport: () => Promise<void>
 }) {
-  const [openOrdinal, setOpenOrdinal] = useState<number | null>(day?.ordinal ?? null)
+  const [picked, setPicked] = useState<Picked | null>(null)
   const [taps, setTaps] = useState<Taps>(noTaps)
   const [noted, setNoted] = useState<Record<number, string>>({})
 
-  const open = week.days.find((one) => one.ordinal === openOrdinal) ?? null
+  // Derived, never remembered: today's Day changes under the screen at local midnight
+  // and when the Week being trained moves on, and a Day held from before would take
+  // every tap with it — the Log would be written against the Day that has passed.
+  const open = openOn({ week, today: day, picked })
+
+  function pick(ordinal: number) {
+    setPicked({ ordinal, ofWeek: week.number })
+  }
 
   function record(entry: Logged) {
     setTaps((current) => withTap(current, entry))
@@ -65,7 +75,7 @@ export function WeekView({
       {open === null ? (
         <section className='space-y-1'>
           <h1 className='text-2xl font-semibold'>Week {week.number}</h1>
-          <p>Nothing is scheduled for today. Pick a Day to look at.</p>
+          <p>This Week holds no Days.</p>
         </section>
       ) : (
         <DayDetail
@@ -84,8 +94,8 @@ export function WeekView({
 
       <DayStrip
         week={week}
-        open={openOrdinal}
-        onOpen={setOpenOrdinal}
+        open={open?.ordinal ?? null}
+        onOpen={pick}
       />
     </div>
   )

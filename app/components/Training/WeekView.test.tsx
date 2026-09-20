@@ -207,6 +207,32 @@ function openApp({
   return page.elementLocator(container)
 }
 
+/** The screen the page keeps mounted while the Day it is handed changes under it. */
+function mounted() {
+  const container = document.createElement('div')
+
+  document.body.append(container)
+
+  const root = createRoot(container)
+
+  return {
+    locator: page.elementLocator(container),
+    showing(day: Day | null) {
+      root.render(
+        <WeekView
+          week={WEEK}
+          day={day}
+          onLog={() => {}}
+          onNote={() => {}}
+          unsaved={null}
+          onRetry={() => {}}
+          onExport={async () => {}}
+        />,
+      )
+    },
+  }
+}
+
 /** The screen, plus everything it has sent — the tap is the save, so there is no button. */
 function openTraining({ day }: { day: Day | null }) {
   const logged: Logged[] = []
@@ -300,11 +326,31 @@ describe('the Day the athlete opens on', () => {
     await expect.element(screen.getByText('10–11 km @ 6:00–6:10/km', { exact: true })).toBeVisible()
   })
 
-  test('a Week that holds no Day for today still opens, and says so', async () => {
+  test('a Week off the shelf, holding no Day for today, opens on its first Day rather than on nothing', async () => {
     const screen = openApp({ day: null })
 
-    await expect.element(screen.getByText(/Nothing is scheduled for today/)).toBeVisible()
-    await expect.element(screen.getByRole('button', { name: /Day 1/ })).toBeVisible()
+    await expect.element(screen.getByRole('heading', { name: /Upper Push \+ Core/ })).toBeVisible()
+    await expect.element(screen.getByText('Dips', { exact: true })).toBeVisible()
+  })
+
+  test('the screen follows today when the Day rolls over under it, so a tap lands on the Day being trained', async () => {
+    const screen = mounted()
+
+    screen.showing(dayOf(1))
+    await expect.element(screen.locator.getByRole('heading', { name: /Upper Push \+ Core/ })).toBeVisible()
+
+    screen.showing(dayOf(6))
+    await expect.element(screen.locator.getByRole('heading', { name: /Zone 2 Run/ })).toBeVisible()
+  })
+
+  test('a Day the athlete picked stays picked while the Week does — looking ahead is not undone by a refetch', async () => {
+    const screen = mounted()
+
+    screen.showing(dayOf(1))
+    await screen.locator.getByRole('button', { name: /Day 6/ }).click()
+
+    screen.showing(dayOf(1))
+    await expect.element(screen.locator.getByRole('heading', { name: /Zone 2 Run/ })).toBeVisible()
   })
 })
 

@@ -26,7 +26,8 @@ _Avoid_: Plan, block, cycle
 Every Week the athlete has imported, most recent first, with the Week being trained
 marked in words rather than by date arithmetic. What makes twenty Weeks something to
 look back through. A Week on the shelf is not read-only: last week's makeup session is
-logged against the Week it belongs to.
+logged against the Week it belongs to, and opening one puts its first Day on screen —
+its plan and its Logs, with no tap first, because it holds no today to open on.
 _Avoid_: History, archive, list
 
 **Day**:

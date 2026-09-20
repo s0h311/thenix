@@ -97,8 +97,8 @@ function ShelfPage() {
         ) : (
           <TrainingWeek
             week={opened}
-            // The Week being trained opens on today; a past one holds no today, and
-            // the screen then asks for a Day rather than guessing at one.
+            // The Week being trained opens on today; a Week off the shelf holds no
+            // today, and opens on its first Day — its plan and its Logs, no tap first.
             day={opened.days.find((day) => day.date === today()) ?? null}
             refresh='week'
           />
