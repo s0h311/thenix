@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { sendSave } from '../../libs/Training/log.ts'
-import { held, landed, nothingUnsaved, unsaved, unsavedMessage } from '../../libs/Training/saving.ts'
+import { held, landed, nothingUnsaved, unsaved, unsavedAlert } from '../../libs/Training/saving.ts'
 import type { Logged, Noted } from '../../libs/Training/logging.ts'
 import type { Save } from '../../libs/Training/saving.ts'
 
@@ -27,7 +27,7 @@ export function useSaving({ weekNumber, refresh }: { weekNumber: number; refresh
   return {
     record: (entry: Logged) => mutate({ kind: 'log', entry }),
     note: (entry: Noted) => mutate({ kind: 'note', entry }),
-    unsaved: unsavedMessage(outbox),
+    unsaved: unsavedAlert(outbox),
     /** Everything still held, sent again — one tap for a whole session's worth. */
     retry: () => unsaved(outbox).forEach((save) => mutate(save)),
   }

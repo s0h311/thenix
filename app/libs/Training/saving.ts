@@ -29,19 +29,28 @@ export function unsaved(outbox: Outbox): Save[] {
   return Object.values(outbox)
 }
 
+/** The warning bar, in words: what is held, and what the one button does about it. */
+export type Alert = Readonly<{ said: string; action: string }>
+
 /**
  * What the screen says while a Log is held, and nothing at all while none is. It
  * names the phone on purpose: the tap is still on screen and tapping it again
  * changes nothing, so the athlete is told where the Log is rather than that it failed.
+ *
+ * The button is worded here beside the sentence, because it is the same fact counted
+ * twice and the two would drift apart if the screen wrote one of them.
  */
-export function unsavedMessage(outbox: Outbox): string | null {
+export function unsavedAlert(outbox: Outbox): Alert | null {
   const count = unsaved(outbox).length
 
   if (count === 0) {
     return null
   }
 
-  return `${count} ${count === 1 ? 'Log is' : 'Logs are'} still on this phone. Check your connection.`
+  return {
+    said: `${count} ${count === 1 ? 'Log is' : 'Logs are'} still on this phone. Check your connection.`,
+    action: count === 1 ? 'Save it now' : 'Save them now',
+  }
 }
 
 function targetOf(save: Save): string {

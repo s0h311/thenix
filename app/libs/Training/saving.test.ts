@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { held, landed, nothingUnsaved, unsaved, unsavedMessage } from './saving.ts'
+import { held, landed, nothingUnsaved, unsaved, unsavedAlert } from './saving.ts'
 import type { Save } from './saving.ts'
 import type { Difficulty } from '../../../shared/training.ts'
 
@@ -46,16 +46,22 @@ describe('what is held, and what is a separate thing to hold', () => {
 
 describe('what the athlete is told', () => {
   test('nothing, while everything the phone took has landed', () => {
-    expect(unsavedMessage(nothingUnsaved)).toBeNull()
+    expect(unsavedAlert(nothingUnsaved)).toBeNull()
   })
 
   test('that the Log is on the phone and not on the server, so a retap is not the fix', () => {
-    expect(unsavedMessage(held(nothingUnsaved, tap()))).toBe('1 Log is still on this phone. Check your connection.')
+    expect(unsavedAlert(held(nothingUnsaved, tap()))).toEqual({
+      said: '1 Log is still on this phone. Check your connection.',
+      action: 'Save it now',
+    })
   })
 
   test('how many, because a dead connection loses a set at a time', () => {
     const three = held(held(held(nothingUnsaved, tap()), tap({ exerciseKey: 'rows' })), dayNote())
 
-    expect(unsavedMessage(three)).toBe('3 Logs are still on this phone. Check your connection.')
+    expect(unsavedAlert(three)).toEqual({
+      said: '3 Logs are still on this phone. Check your connection.',
+      action: 'Save them now',
+    })
   })
 })
