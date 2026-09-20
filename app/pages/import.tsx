@@ -4,6 +4,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { CopyButton } from '../components/Training/CopyButton.tsx'
 import { Faults } from '../components/Training/Faults.tsx'
 import { Preview } from '../components/Training/Preview.tsx'
+import { today } from '../libs/Training/clock.ts'
 import { copyRegistry, copySchema } from '../libs/Training/export.ts'
 import type { ImportFault, Revision, WeekPreview } from '../../shared/training.ts'
 
@@ -42,10 +43,6 @@ type Stage =
   | { at: 'previewing'; preview: WeekPreview; startDate: string; revising: Revision | null }
   | { at: 'rejected'; faults: ImportFault[] }
   | { at: 'imported'; week: ImportedWeek }
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10)
-}
 
 async function post(url: string, body: unknown): Promise<unknown> {
   const response = await fetch(url, {

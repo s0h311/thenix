@@ -34,6 +34,8 @@ One position within a Week, identified by its ordinal (1..n). Its weekday is der
 `Week.startDate + (n-1)` and is display only. A Week need not have seven Days, and a
 Revision may leave a gap where it dropped one — but the ordinal _is_ the Day, so no
 Week holds it twice: a paste that writes one Day twice is rejected, not merged.
+Which Day is _today_ is the athlete's own date, never the server's or UTC's: the phone
+sends it on every call, because the training happened where the athlete is standing.
 _Avoid_: Session, date, workout
 
 **Focus**:

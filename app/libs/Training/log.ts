@@ -1,11 +1,5 @@
+import { today } from './clock.ts'
 import type { Logged, Noted } from '../../components/Training/WeekView.tsx'
-
-/** The athlete's local date — the Day being trained is the one where they are. */
-export function today(): string {
-  const now = new Date()
-
-  return [now.getFullYear(), `${now.getMonth() + 1}`.padStart(2, '0'), `${now.getDate()}`.padStart(2, '0')].join('-')
-}
 
 /** Sends one tap on its way. The screen has already moved on — this only persists it. */
 export async function sendLog({ weekNumber, entry }: { weekNumber: number; entry: Logged }): Promise<void> {

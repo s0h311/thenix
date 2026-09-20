@@ -3,8 +3,9 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { Mark } from '../components/Brand/Mark.tsx'
 import { WeekView } from '../components/Training/WeekView.tsx'
+import { today } from '../libs/Training/clock.ts'
 import { copyWeek } from '../libs/Training/export.ts'
-import { sendLog, sendNote, today } from '../libs/Training/log.ts'
+import { sendLog, sendNote } from '../libs/Training/log.ts'
 import type { CurrentDay } from '../../shared/training.ts'
 
 export const Route = createFileRoute('/')({

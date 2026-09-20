@@ -2,8 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Shelf } from '../components/Training/Shelf.tsx'
 import { WeekView } from '../components/Training/WeekView.tsx'
+import { today } from '../libs/Training/clock.ts'
 import { copyWeek } from '../libs/Training/export.ts'
-import { sendLog, sendNote, today } from '../libs/Training/log.ts'
+import { sendLog, sendNote } from '../libs/Training/log.ts'
 import type { Week, WeekOnShelf } from '../../shared/training.ts'
 
 /** Which Week is open lives in the URL, so a Week looked up is a Week that can be gone back to. */
