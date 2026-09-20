@@ -1,0 +1,300 @@
+{
+  "number": 12,
+  "notes": "Return-to-load week. Push and pull resume at reduced leverage. Right biceps re-enters training as the primary rehab lift.\n\nPAIN RULE (all days): ≤3/10 during, baseline within 24h, no increased stiffness next morning. Fail → drop back one step, do not push through.\n\nSTAYS OUT THIS WEEK (non-negotiable): chair dips, pull-ups / chin-ups / pull-up negatives, decline and archer push-ups, HSPU, pike push-ups.",
+  "days": [
+    {
+      "ordinal": 1,
+      "kind": "training",
+      "focus": "Upper Push (reintro) + Core",
+      "notes": "Rest 2–3 min main lifts.",
+      "exercises": [
+        {
+          "key": "isometric-push-up-hold",
+          "movementId": "isometric-push-up-hold",
+          "name": "Isometric push-up hold",
+          "variant": "~90°",
+          "prescription": { "kind": "time", "sets": 2, "seconds": { "min": 30, "max": 30 } },
+          "cue": "Screen. Pain-free → proceed. Sharp pain → stop the day, revert to wk11.",
+          "raw": "Isometric push-up hold ~90°: 2×30s — screen. Pain-free → proceed. Sharp pain → stop day, revert to wk11."
+        },
+        {
+          "key": "incline-push-ups",
+          "movementId": "push-up",
+          "name": "Incline push-ups",
+          "variant": "hands on chair",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 8, "max": 8 } },
+          "tempo": "3s down / 1s pause / 1s up",
+          "cue": "Deliberately easy leverage. You were doing 4×8 decline; this is a big step back. That is the point.",
+          "raw": "Incline push-ups (hands on chair): 4×8, 3s down / 1s pause / 1s up — deliberately easy leverage."
+        },
+        {
+          "key": "right-arm-curl",
+          "movementId": "biceps-curl",
+          "name": "Right-arm backpack curl",
+          "side": "right",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "symmetric", "value": 4, "unit": "kg", "approx": true, "implement": "backpack" },
+          "tempo": "3s up / 3s down",
+          "cue": "THE rehab lift. Slow, light, controlled. Do not chase the left arm.",
+          "raw": "Right-arm backpack curl: 3×8, 3s up / 3s down, ~4kg — THE rehab lift."
+        },
+        {
+          "key": "left-arm-curl",
+          "movementId": "biceps-curl",
+          "name": "Left-arm backpack curl",
+          "side": "left",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 6, "max": 6 } },
+          "load": { "kind": "symmetric", "value": 9, "unit": "kg", "implement": "backpack" },
+          "tempo": "3s up / 3s down",
+          "raw": "Left-arm backpack curl: 3×6, 9kg, same tempo — hold, don't widen the gap."
+        },
+        {
+          "key": "tricep-extension",
+          "movementId": "tricep-extension",
+          "name": "Backpack tricep extension",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": {
+            "kind": "asymmetric",
+            "left": { "value": 7, "unit": "kg" },
+            "right": { "value": 4, "unit": "kg", "approx": true },
+            "implement": "backpack"
+          },
+          "raw": "Backpack tricep extension, both arms: 3×8, 7kg left / ~4kg right"
+        },
+        {
+          "key": "hollow-body-hold",
+          "movementId": "hollow-body-hold",
+          "name": "Hollow body hold",
+          "prescription": { "kind": "time", "sets": 3, "seconds": { "min": 45, "max": 45 } },
+          "raw": "Hollow body hold: 3×45s"
+        }
+      ]
+    },
+    {
+      "ordinal": 2,
+      "kind": "training",
+      "focus": "Zone 2 Run",
+      "exercises": [
+        {
+          "key": "zone-2-run",
+          "movementId": "zone-2-run",
+          "name": "Zone 2 run",
+          "prescription": { "kind": "distance", "km": { "min": 8, "max": 9 }, "pace": null },
+          "cue": "Conversational, 3:2 breathing.",
+          "raw": "Day 2 (Fri) — Zone 2 Run | 8–9 km, conversational, 3:2 breathing"
+        }
+      ]
+    },
+    {
+      "ordinal": 3,
+      "kind": "training",
+      "focus": "Lower Body (consolidated)",
+      "notes": "Rest 3 min main lifts, explosive intent.",
+      "exercises": [
+        {
+          "key": "box-pistols",
+          "movementId": "box-pistol-squat",
+          "name": "Box pistols",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 5, "max": 5 } },
+          "load": { "kind": "bodyweight" },
+          "cue": "Lower box or less assist.",
+          "raw": "Box pistols: 4×5/side — bodyweight, lower box or less assist"
+        },
+        {
+          "key": "bulgarian-split-squats",
+          "movementId": "bulgarian-split-squat",
+          "name": "Bulgarian split squats",
+          "variant": "loaded",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 6, "max": 6 } },
+          "load": { "kind": "improvised", "description": "backpack, above the 7.3kg of wk11" },
+          "tempo": "3s down",
+          "raw": "Bulgarian split squats loaded: 4×6/side, 3s down — bump load from 7.3kg"
+        },
+        {
+          "key": "single-leg-rdl",
+          "movementId": "single-leg-rdl",
+          "name": "Single-leg RDL",
+          "variant": "loaded",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 6, "max": 6 } },
+          "load": { "kind": "improvised", "description": "backpack" },
+          "tempo": "slow",
+          "raw": "Single-leg RDL loaded: 3×6/side, slow"
+        },
+        {
+          "key": "single-leg-hip-thrust",
+          "movementId": "single-leg-hip-thrust",
+          "name": "Single-leg hip thrust",
+          "variant": "shoulders elevated, loaded",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 10, "max": 10 } },
+          "load": { "kind": "improvised", "description": "backpack" },
+          "cue": "Setup is the problem → sub loaded high step-up 3×8/side, 3s down.",
+          "raw": "Single-leg hip thrust, shoulders elevated, loaded: 3×10/side — glutes keep the higher-rep exception."
+        },
+        {
+          "key": "single-leg-calf-raises",
+          "movementId": "single-leg-calf-raise",
+          "name": "Single-leg calf raises",
+          "variant": "deficit, loaded",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "improvised", "description": "backpack" },
+          "cue": "Full stretch off the edge.",
+          "raw": "Single-leg calf raises, deficit, loaded: 3×8/side, full stretch off edge"
+        }
+      ]
+    },
+    {
+      "ordinal": 4,
+      "kind": "rest",
+      "focus": "Full Rest",
+      "notes": "Walk optional.",
+      "exercises": []
+    },
+    {
+      "ordinal": 5,
+      "kind": "training",
+      "focus": "Upper Pull (reintro) + Core",
+      "notes": "Rest 2 min. Stripped down on purpose — pull loads the tendon harder than push.",
+      "exercises": [
+        {
+          "key": "scapular-pulls",
+          "movementId": "scapular-pull",
+          "name": "Scapular pulls",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 6, "max": 6 } },
+          "cue": "First, as always.",
+          "raw": "Scapular pulls: 4×6 clean — first, as always"
+        },
+        {
+          "key": "dead-hang",
+          "movementId": "dead-hang",
+          "name": "Dead hang",
+          "variant": "passive",
+          "prescription": { "kind": "time", "sets": 2, "seconds": { "min": 20, "max": 30 } },
+          "cue": "Pain-free only. Stop if the front of the shoulder talks.",
+          "raw": "Dead hang: 2×20–30s, passive, pain-free only."
+        },
+        {
+          "key": "inverted-rows",
+          "movementId": "inverted-row",
+          "name": "Inverted rows",
+          "variant": "high bar / easy angle, pronated grip",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 8, "max": 8 } },
+          "tempo": "2s pause at chest",
+          "cue": "Overhand, not underhand. Body angle shallow.",
+          "raw": "Inverted rows, HIGH bar / easy angle, PRONATED grip: 4×8, 2s pause at chest"
+        },
+        {
+          "key": "reverse-snow-angels",
+          "movementId": "reverse-snow-angel",
+          "name": "Reverse snow angels",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 12, "max": 12 } },
+          "load": { "kind": "perHand", "value": 0.5, "unit": "l", "implement": "bottles" },
+          "raw": "Reverse snow angels: 3×12, 0.5L bottles"
+        },
+        {
+          "key": "right-arm-curl",
+          "movementId": "biceps-curl",
+          "name": "Right-arm backpack curl",
+          "side": "right",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "symmetric", "value": 4, "unit": "kg", "approx": true, "implement": "backpack" },
+          "tempo": "3s up / 3s down",
+          "raw": "Right-arm backpack curl: 3×8, 3s/3s, ~4kg — 2nd loading session of the week"
+        },
+        {
+          "key": "left-arm-curl",
+          "movementId": "biceps-curl",
+          "name": "Left-arm backpack curl",
+          "side": "left",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 6, "max": 6 } },
+          "load": { "kind": "symmetric", "value": 9, "unit": "kg", "implement": "backpack" },
+          "tempo": "3s up / 3s down",
+          "raw": "Left-arm backpack curl: 3×6, 9kg"
+        },
+        {
+          "key": "leg-raises",
+          "movementId": "leg-raise",
+          "name": "Leg raises",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 15, "max": 15 } },
+          "restSeconds": { "min": 60, "max": 90 },
+          "raw": "Leg raises: 3×15, 60–90s rest"
+        },
+        {
+          "key": "hollow-body-hold",
+          "movementId": "hollow-body-hold",
+          "name": "Hollow body hold",
+          "prescription": { "kind": "time", "sets": 3, "seconds": { "min": 45, "max": 45 } },
+          "raw": "Hollow body hold: 3×45s"
+        },
+        {
+          "key": "tricep-extension",
+          "movementId": "tricep-extension",
+          "name": "Backpack tricep extension",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": {
+            "kind": "asymmetric",
+            "left": { "value": 7, "unit": "kg" },
+            "right": { "value": 4, "unit": "kg", "approx": true },
+            "implement": "backpack"
+          },
+          "raw": "Backpack tricep extension, both arms: 3×8, 7kg left / ~4kg right"
+        }
+      ]
+    },
+    {
+      "ordinal": 6,
+      "kind": "training",
+      "focus": "VO2max Run",
+      "notes": "PROTOCOL CHANGE (Norwegian 4×4). Total work at intensity: 16 min. Target is ≥15 min.",
+      "exercises": [
+        {
+          "key": "warm-up",
+          "movementId": "run-warm-up",
+          "name": "Warm-up",
+          "prescription": { "kind": "time", "sets": 1, "seconds": { "min": 600, "max": 720 } },
+          "cue": "Easy jog, building to moderate. Do not cut short.",
+          "raw": "10–12 min warm-up: easy jog, building to moderate."
+        },
+        {
+          "key": "norwegian-4x4",
+          "movementId": "vo2max-intervals",
+          "name": "Norwegian 4×4",
+          "prescription": {
+            "kind": "rounds",
+            "rounds": 4,
+            "work": { "kind": "time", "sets": 1, "seconds": { "min": 240, "max": 240 } },
+            "recovery": { "kind": "time", "sets": 1, "seconds": { "min": 180, "max": 180 } }
+          },
+          "cue": "4 min at 90–95% HRmax, RPE 8, cannot speak in sentences. NOT a sprint. Recovery is an easy jog, not a walk.",
+          "raw": "4 rounds: 4 min at 90–95% HRmax / 3 min active recovery at ~70% HRmax — EASY JOG. Non-negotiable."
+        },
+        {
+          "key": "cooldown",
+          "movementId": "run-cooldown",
+          "name": "Cooldown",
+          "prescription": { "kind": "time", "sets": 1, "seconds": { "min": 300, "max": 300 } },
+          "raw": "5 min cooldown"
+        }
+      ]
+    },
+    {
+      "ordinal": 7,
+      "kind": "training",
+      "focus": "Active Recovery",
+      "notes": "Mobility: 90/90 hip, cat-cow, wrist circles. Shoulder dislocates — pain-free range only. Real reps.",
+      "exercises": [
+        {
+          "key": "walk",
+          "movementId": "walk",
+          "name": "Walk",
+          "prescription": { "kind": "time", "sets": 1, "seconds": { "min": 1800, "max": 1800 } },
+          "raw": "Day 7 (Wed) — Active Recovery | 30 min walk + mobility"
+        }
+      ]
+    }
+  ]
+}

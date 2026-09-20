@@ -1,0 +1,144 @@
+{
+  "number": 9,
+  "notes": "Festival week. Three Days only — Days 1–4 were travel.",
+  "days": [
+    {
+      "ordinal": 5,
+      "kind": "training",
+      "focus": "Upper Pull + Core",
+      "notes": "Priority, first back.",
+      "exercises": [
+        {
+          "key": "scapular-pulls",
+          "movementId": "scapular-pull",
+          "name": "Scapular pulls",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 6, "max": 6 } },
+          "cue": "Clean reps, first — non-negotiable, your #1 limiter.",
+          "raw": "Scapular pulls 4×6 clean, FIRST — non-negotiable, your #1 limiter."
+        },
+        {
+          "key": "pull-up-negatives",
+          "movementId": "pull-up-negative",
+          "name": "Pull-up negatives",
+          "variant": "full dead hang, chest-to-bar",
+          "prescription": { "kind": "reps", "sets": 5, "reps": { "min": 2, "max": 2 } },
+          "tempo": "5s lower",
+          "raw": "Pull-up negatives 5×2, full dead hang, 5s lower, chest-to-bar (actually do these, skipped wk8)."
+        },
+        {
+          "key": "full-pull-up-attempts",
+          "movementId": "pull-up",
+          "name": "Full pull-up attempts",
+          "prescription": { "kind": "reps", "sets": 1, "reps": { "min": 1, "max": 2 } },
+          "cue": "Drive elbows down, not arms.",
+          "raw": "1–2 full attempts, drive elbows down not arms."
+        },
+        {
+          "key": "dead-hang",
+          "movementId": "dead-hang",
+          "name": "Dead hang",
+          "toFailure": true,
+          "prescription": { "kind": "time", "sets": 3, "seconds": null },
+          "raw": "Dead hang 3× max."
+        },
+        {
+          "key": "inverted-rows",
+          "movementId": "inverted-row",
+          "name": "Inverted/table rows",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 8, "max": 10 } },
+          "cue": "Straighter body.",
+          "raw": "Inverted/table rows 4×8–10, straighter body."
+        },
+        {
+          "key": "reverse-snow-angels",
+          "movementId": "reverse-snow-angel",
+          "name": "Reverse snow angels",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 12, "max": 12 } },
+          "cue": "Before fatigue.",
+          "raw": "Reverse snow angels 3×12, before fatigue."
+        },
+        {
+          "key": "leg-raises",
+          "movementId": "leg-raise",
+          "name": "Leg raises",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 14, "max": 14 } },
+          "restSeconds": { "min": 60, "max": 90 },
+          "raw": "Leg raises 3×14, rest 60–90s."
+        }
+      ]
+    },
+    {
+      "ordinal": 6,
+      "kind": "rest",
+      "notes": "Did nothing.",
+      "exercises": []
+    },
+    {
+      "ordinal": 7,
+      "kind": "training",
+      "focus": "Lower (strength)",
+      "notes": "Rest 3 min between sets, every rep explosive intent.",
+      "exercises": [
+        {
+          "key": "bulgarian-split-squats",
+          "movementId": "bulgarian-split-squat",
+          "name": "Bulgarian split squats",
+          "variant": "loaded",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 5, "max": 5 } },
+          "load": { "kind": "improvised", "description": "backpack" },
+          "tempo": "3s down",
+          "raw": "Bulgarian split squats LOADED (backpack): 4×5/side, 3s down."
+        },
+        {
+          "key": "single-leg-rdl",
+          "movementId": "single-leg-rdl",
+          "name": "Single-leg RDL",
+          "variant": "loaded",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 5, "max": 5 } },
+          "load": { "kind": "improvised", "description": "backpack" },
+          "tempo": "slow",
+          "raw": "Single-leg RDL loaded: 3×5/side slow."
+        },
+        {
+          "key": "pistol-squats",
+          "movementId": "box-pistol-squat",
+          "name": "Pistol squats",
+          "variant": "box / assisted",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 3, "max": 5 } },
+          "raw": "Squats → progress to harder leverage: box/assisted pistol squats 4×3–5/side (or loaded squats 4×6 if pistols not ready)."
+        },
+        {
+          "key": "single-leg-hip-thrust",
+          "movementId": "single-leg-hip-thrust",
+          "name": "Single-leg hip thrust",
+          "variant": "loaded",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 6, "max": 6 } },
+          "load": { "kind": "improvised", "description": "backpack" },
+          "cue": "Pause and squeeze.",
+          "raw": "Single-leg hip thrust loaded: 4×6/side, pause+squeeze."
+        },
+        {
+          "key": "single-leg-calf-raises",
+          "movementId": "single-leg-calf-raise",
+          "name": "Single-leg calf raises",
+          "variant": "loaded",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "improvised", "description": "backpack" },
+          "raw": "Single-leg calf raises loaded: 3×8."
+        },
+        {
+          "key": "lateral-lunges",
+          "movementId": "lateral-lunge",
+          "name": "Lateral lunges",
+          "optional": true,
+          "prescription": { "kind": "reps", "sets": 2, "reps": { "min": 8, "max": 8 } },
+          "raw": "Lateral lunges: drop or 2×8 as cooldown only."
+        }
+      ]
+    }
+  ]
+}

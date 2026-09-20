@@ -22,9 +22,21 @@ A numbered period of training with a start date, containing ordered Days. The un
 import and of export. Its number comes from the imported JSON, never from counting rows.
 _Avoid_: Plan, block, cycle
 
+**Shelf**:
+Every Week the athlete has imported, most recent first, with the Week being trained
+marked in words rather than by date arithmetic. What makes twenty Weeks something to
+look back through. A Week on the shelf is not read-only: last week's makeup session is
+logged against the Week it belongs to, and opening one puts its first Day on screen —
+its plan and its Logs, with no tap first, because it holds no today to open on.
+_Avoid_: History, archive, list
+
 **Day**:
 One position within a Week, identified by its ordinal (1..n). Its weekday is derived as
-`Week.startDate + (n-1)` and is display only. A Week need not have seven Days.
+`Week.startDate + (n-1)` and is display only. A Week need not have seven Days, and a
+Revision may leave a gap where it dropped one — but the ordinal _is_ the Day, so no
+Week holds it twice: a paste that writes one Day twice is rejected, not merged.
+Which Day is _today_ is the athlete's own date, never the server's or UTC's: the phone
+sends it on every call, because the training happened where the athlete is standing.
 _Avoid_: Session, date, workout
 
 **Focus**:
@@ -69,7 +81,24 @@ import can never fail.
 
 **Log**:
 The record of what the athlete actually did on a Day. Distinct from the coach's intent.
+A Log is the athlete's to take back: emptying a note that was the whole of one leaves
+the Exercise unlogged again. Only the coach's revision never deletes one — see Orphan.
 _Avoid_: Progress, result, history
+
+**Unsaved**:
+A Log the phone has taken and the server has not. The tap is the save and the screen
+moves on the instant it happens, so the one thing it must never do is go on showing a
+set as recorded when nothing reached the server — a basement gym has no signal and the
+Week goes to the coach short. It is named on screen instead, and sending everything
+held is one tap. It lives only as long as the screen does.
+_Avoid_: Pending, failed, offline
+
+**Orphan**:
+A Log whose Exercise a later revision of the Week dropped. The plan moved on and the
+work did not, so the Log is kept and shown under its Day rather than deleted. A Day the
+revision drops whole is kept the same way when anything was recorded on it — the Day is
+still where its orphans belong — and goes only when nothing was.
+_Avoid_: Stale, deleted, removed
 
 **Progression**:
 The coach's decision about which lever moves next Week. It appears in Week prose and is
@@ -81,6 +110,36 @@ _Avoid_: Progress
 **Import**:
 Taking a coach-authored Week JSON into the app. The app validates; it never parses prose.
 
+**Preview**:
+The parse shown before anything is written: the Week as the app read it, never the
+text that was pasted. Confirming is a second step, so a Week that read differently
+from what the athlete expected is caught while the shelf is still untouched. It is
+also where the start date is picked — the day after the last Week ended, or the next
+Monday when there is none, because the coach writes no weekday at all. A Revision is
+the exception: it is offered the date its Week already runs on.
+_Avoid_: Draft, dry run, staging
+
+**Revision**:
+An Import of a Week number already on the shelf. It replaces the plan and keeps the
+Logs, so it is not a new Week and never moves one: the dates it is already trained on
+are the dates it keeps, and the Preview says what is being replaced, how much is
+recorded against it, and — because the date stays editable, for the Week imported on
+the wrong day — how far a re-dating would move it and that the Logs move with it.
+Confirming a Revision says "Replace", never "Import": the athlete is overwriting a
+Week they may be halfway through. A Day or Exercise a Revision no longer asks for
+becomes an Orphan rather than a deletion.
+_Avoid_: Update, re-import as a second Week, correction
+
 **Export**:
 Emitting a Week with its Logs as JSON, for the coach to read when writing the next Week.
-Carries the known `movementId` list so the coach reuses ids instead of inventing them.
+Three things are exported, each a paste into the coach's chat: a Week, the **schema**,
+and the **registry**.
+
+**Schema export**:
+The contract the coach writes to, published as JSON Schema generated from the parser
+itself so the two cannot drift. A first-class feature, not documentation: a fresh chat
+knows nothing, and a coach that has not read it writes Weeks the import rejects.
+
+**Registry export**:
+Every `movementId` an import has registered, so the coach reuses ids instead of
+inventing them. Global rather than per-athlete — ids are shared vocabulary.

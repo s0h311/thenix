@@ -1,1 +1,12 @@
 @import 'tailwindcss';
+
+/*
+ * The brand is the two colours already in the logo, taken from the amber scale
+ * rather than restated as literals so the rest of the palette stays consistent.
+ * --color-brand carries text and primary actions; --color-brand-surface carries
+ * surfaces and highlights.
+ */
+@theme {
+  --color-brand: var(--color-amber-900);
+  --color-brand-surface: var(--color-amber-200);
+}

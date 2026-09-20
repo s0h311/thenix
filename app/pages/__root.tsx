@@ -5,6 +5,8 @@ import '../index.css'
 import type { ReactNode } from 'react'
 import { Outlet, createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AppHeader } from '../components/AppHeader.tsx'
+import { BRAND_HEAD_LINKS } from '../libs/Brand/brand.ts'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -16,7 +18,11 @@ export const Route = createRootRoute({
         name: 'viewport',
         content: 'width=device-width, initial-scale=1',
       },
+      {
+        title: 'thenix',
+      },
     ],
+    links: BRAND_HEAD_LINKS,
   }),
   component: RootComponent,
 })
@@ -33,7 +39,10 @@ function RootComponent() {
   return (
     <RootDocument>
       <QueryClientProvider client={queryClient}>
-        <Outlet />
+        <AppHeader />
+        <main className='mx-auto max-w-3xl px-4 py-6'>
+          <Outlet />
+        </main>
       </QueryClientProvider>
     </RootDocument>
   )
@@ -41,11 +50,11 @@ function RootComponent() {
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang='de-DE'>
+    <html lang='en'>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className='bg-white text-brand antialiased'>
         {children}
         <Scripts />
       </body>
