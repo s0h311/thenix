@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { asAsked, asImport, asMoved, asRevision } from '../../libs/Training/notation.ts'
 import { Button } from '../UI/Button.tsx'
 import { Card } from '../UI/Card.tsx'
+import { Caution } from '../UI/Caution.tsx'
 import { TextInput } from '../UI/Field.tsx'
 import { Layer } from '../UI/Layer.tsx'
 import type { Revision, WeekPreview } from '../../../shared/training.ts'
@@ -101,20 +102,5 @@ export function Preview({
         {moving === null ? null : <Caution live>{moving}</Caution>}
       </Card>
     </Layer>
-  )
-}
-
-/**
- * What confirming costs, in the warning tokens rather than the brand: this is
- * something to read, never something to press.
- */
-function Caution({ children, live = false }: { children: string; live?: boolean }) {
-  return (
-    <p
-      aria-live={live ? 'polite' : undefined}
-      className='rounded-lg border border-warning-line bg-warning-soft px-3 py-2 text-label font-semibold text-warning-ink'
-    >
-      {children}
-    </p>
   )
 }

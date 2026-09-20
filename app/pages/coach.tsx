@@ -7,9 +7,11 @@ import { Faults } from '../components/Training/Faults.tsx'
 import { Preview } from '../components/Training/Preview.tsx'
 import { Button } from '../components/UI/Button.tsx'
 import { Card } from '../components/UI/Card.tsx'
+import { Caution } from '../components/UI/Caution.tsx'
 import { TextArea } from '../components/UI/Field.tsx'
 import { today } from '../libs/Training/clock.ts'
 import { copyRegistry, copySchema, copyWeek } from '../libs/Training/export.ts'
+import { answerOf } from '../libs/Training/importing.ts'
 import { openShelf, shelfKey } from '../libs/Training/shelf.ts'
 import type { ImportFault, Revision, WeekPreview } from '../../shared/training.ts'
 
@@ -33,31 +35,56 @@ type ImportedWeek = {
   }[]
 }
 
-type PreviewResult =
-  | { ok: true; preview: WeekPreview; startDate: string; revising: Revision | null }
-  | { ok: false; errors: ImportFault[] }
-type ImportResult = { ok: true; week: ImportedWeek } | { ok: false; errors: ImportFault[] }
+/** What the server answers with when it did read the paste. The refusals are `answerOf`'s. */
+type Read = { preview: WeekPreview; startDate: string; revising: Revision | null }
+type Imported = { week: ImportedWeek }
 
 /**
  * Where the athlete is in the import. Confirming is a second step on purpose: the
  * paste is read back as a Week first, and nothing is written until that Week is the
  * one the athlete expected.
+ *
+ * `stalled` is the step that was missing: a paste the server never answered wrote
+ * nothing, and is neither a Week nor a Week refused.
  */
 type Stage =
   | { at: 'pasting' }
   | { at: 'previewing'; preview: WeekPreview; startDate: string; revising: Revision | null }
   | { at: 'rejected'; faults: ImportFault[] }
   | { at: 'imported'; week: ImportedWeek }
+  | { at: 'stalled'; said: string }
 
-async function post(url: string, body: unknown): Promise<unknown> {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+/**
+ * The status and the body, both, because what the body means depends on the status
+ * — and neither throws: a fetch that never completes is an answer the screen has to
+ * show, not an exception that leaves the button reading "Reading…" for good.
+ */
+async function post(url: string, body: unknown): Promise<{ status: number | null; body: unknown }> {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    })
 
-  return await response.json()
+    return { status: response.status, body: await parsed(response) }
+  } catch {
+    return { status: null, body: null }
+  }
 }
+
+/** A body that is not JSON is a body that says nothing; the status still does. */
+async function parsed(response: Response): Promise<unknown> {
+  try {
+    return await response.json()
+  } catch {
+    return null
+  }
+}
+
+/** The session having ended, said where the athlete is standing — with their paste still in the box. */
+const ENDED =
+  'Your session has ended, so nothing was imported. Your paste is still here. Sign in again, then read it back.'
 
 /**
  * The weekly ritual, in one place and organised by direction: what arrives from the
@@ -85,22 +112,46 @@ function FromYourCoach() {
     event.preventDefault()
     setWorking(true)
 
-    const result = (await post('/api/actions/previewWeek', { json, today: today() })) as PreviewResult
+    const answer = answerOf<Read>(await post('/api/actions/previewWeek', { json, today: today() }))
 
     setStage(
-      result.ok
-        ? { at: 'previewing', preview: result.preview, startDate: result.startDate, revising: result.revising }
-        : { at: 'rejected', faults: result.errors },
+      answer.at === 'read'
+        ? { at: 'previewing', preview: answer.it.preview, startDate: answer.it.startDate, revising: answer.it.revising }
+        : answer.at === 'rejected'
+          ? { at: 'rejected', faults: answer.faults }
+          : {
+              at: 'stalled',
+              said:
+                answer.at === 'signedOut'
+                  ? ENDED
+                  : 'The Week could not be read back. You are still signed in — this one is the connection. Nothing was imported, so try again when you have one.',
+            },
     )
     setWorking(false)
   }
 
-  async function confirm(startDate: string) {
+  async function confirm({ startDate, number }: { startDate: string; number: number }) {
     setWorking(true)
 
-    const result = (await post('/api/actions/importWeek', { json, startDate, today: today() })) as ImportResult
+    const answer = answerOf<Imported>(await post('/api/actions/importWeek', { json, startDate, today: today() }))
 
-    setStage(result.ok ? { at: 'imported', week: result.week } : { at: 'rejected', faults: result.errors })
+    setStage(
+      answer.at === 'read'
+        ? { at: 'imported', week: answer.it.week }
+        : answer.at === 'rejected'
+          ? { at: 'rejected', faults: answer.faults }
+          : {
+              at: 'stalled',
+              // The one answer that is not "nothing happened": the paste may have been
+              // written before the answer was lost, so the athlete is sent to look
+              // rather than told either way. Importing it again is a Revision of a Week
+              // with nothing logged against it yet, which costs nothing.
+              said:
+                answer.at === 'signedOut'
+                  ? ENDED
+                  : `Week ${number} may not have been saved — the server never answered. Check your Weeks, and import it again if it is not there.`,
+            },
+    )
     setWorking(false)
   }
 
@@ -144,7 +195,7 @@ function FromYourCoach() {
           preview={stage.preview}
           startDate={stage.startDate}
           revising={stage.revising}
-          onConfirm={confirm}
+          onConfirm={(startDate) => void confirm({ startDate, number: stage.preview.number })}
           onBack={() => setStage({ at: 'pasting' })}
         />
       )}
@@ -154,6 +205,9 @@ function FromYourCoach() {
           onBack={() => setStage({ at: 'pasting' })}
         />
       )}
+      {/* Beside the paste box rather than over it: there is nothing to read back and
+          nothing to send the coach, and the text to try again with is right here. */}
+      {stage.at === 'stalled' && <Caution live>{stage.said}</Caution>}
       {stage.at === 'imported' && <WeekReadBack week={stage.week} />}
     </Direction>
   )
