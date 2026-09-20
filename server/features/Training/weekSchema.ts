@@ -38,19 +38,26 @@ const repsSchema = z.object({ kind: z.literal('reps'), sets: z.int(), reps: rang
 const timeSchema = z.object({ kind: z.literal('time'), sets: z.int(), seconds: rangeSchema.nullable() })
 const distanceSchema = z.object({ kind: z.literal('distance'), km: rangeSchema, pace: z.string().nullish() })
 
-const prescriptionSchema: z.ZodType<Prescription> = z.lazy(() =>
-  z.discriminatedUnion('kind', [
-    repsSchema,
-    timeSchema,
-    distanceSchema,
-    z.object({
-      kind: z.literal('rounds'),
-      rounds: z.int(),
-      work: prescriptionSchema,
-      recovery: prescriptionSchema.nullable(),
-    }),
-  ]),
-)
+const prescriptionSchema: z.ZodType<Prescription> = z
+  .lazy(() =>
+    z.discriminatedUnion('kind', [
+      repsSchema,
+      timeSchema,
+      distanceSchema,
+      z.object({
+        kind: z.literal('rounds'),
+        rounds: z.int(),
+        work: prescriptionSchema,
+        recovery: prescriptionSchema.nullable(),
+      }),
+    ]),
+  )
+  // Named, because a round holds a Prescription: the published schema refers to this
+  // by name rather than handing the coach an unreadable generated one.
+  .meta({
+    id: 'Prescription',
+    description: 'What the coach asks for, discriminated by the unit counted (ADR 0002).',
+  })
 
 const exerciseSchema = z.object({
   // Unique within its Day — this is what a Log joins on.
@@ -107,3 +114,15 @@ export const weekSchema = z.object({
 export type ImportedExercise = z.infer<typeof exerciseSchema>
 export type ImportedDay = z.infer<typeof daySchema>
 export type ImportedWeek = z.infer<typeof weekSchema>
+
+/**
+ * The contract as the coach reads it: JSON Schema, generated from the very schema
+ * that validates the paste. Generated rather than written out, so the published form
+ * cannot drift from the parser — which is the whole point of exporting it (ADR 0001).
+ *
+ * `io: 'input'` is what the coach needs: a field with a default is one it may leave
+ * out, and saying otherwise would make it write `side` on every Exercise.
+ */
+export function schemaForCoach(): string {
+  return JSON.stringify(z.toJSONSchema(weekSchema, { io: 'input' }), null, 2)
+}

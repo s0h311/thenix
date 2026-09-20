@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { CopyButton } from '../components/Training/CopyButton.tsx'
+import { copyRegistry, copySchema } from '../libs/Training/export.ts'
 
 export const Route = createFileRoute('/import')({
   component: ImportPage,
@@ -57,11 +59,11 @@ function ImportPage() {
 
   return (
     <div className='space-y-6'>
+      <h1 className='text-2xl font-semibold'>Import a Week</h1>
       <form
         onSubmit={importWeek}
         className='space-y-4'
       >
-        <h1 className='text-2xl font-semibold'>Import a Week</h1>
         <p>Paste the Week your coach wrote, then pick the day it starts.</p>
         <textarea
           required
@@ -93,7 +95,38 @@ function ImportPage() {
 
       {result?.ok === false && <Faults errors={result.errors} />}
       {result?.ok === true && <WeekReadBack week={result.week} />}
+
+      <ForTheCoach />
     </div>
+  )
+}
+
+/**
+ * What a fresh chat needs before the coach can write anything: the contract, and the
+ * ids already in use. Both live here because this is the screen the athlete is on
+ * when the Week they pasted turned out to be wrong, and the fix is a new chat.
+ */
+function ForTheCoach() {
+  return (
+    <section className='space-y-3'>
+      <h2 className='text-xl font-semibold'>Starting a new chat with your coach?</h2>
+      <p className='text-sm'>
+        Paste these in first: the schema is what keeps the Week importable, and the Movement list is what keeps one
+        Exercise the same Exercise from Week to Week.
+      </p>
+      <CopyButton
+        label='Copy the schema'
+        copied='Copied — paste it to your coach.'
+        failed='The schema could not be copied. Try again.'
+        onCopy={() => copySchema()}
+      />
+      <CopyButton
+        label='Copy the Movement list'
+        copied='Copied — paste it to your coach.'
+        failed='The Movement list could not be copied. Try again.'
+        onCopy={() => copyRegistry()}
+      />
+    </section>
   )
 }
 

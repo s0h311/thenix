@@ -95,4 +95,14 @@ Taking a coach-authored Week JSON into the app. The app validates; it never pars
 
 **Export**:
 Emitting a Week with its Logs as JSON, for the coach to read when writing the next Week.
-Carries the known `movementId` list so the coach reuses ids instead of inventing them.
+Three things are exported, each a paste into the coach's chat: a Week, the **schema**,
+and the **registry**.
+
+**Schema export**:
+The contract the coach writes to, published as JSON Schema generated from the parser
+itself so the two cannot drift. A first-class feature, not documentation: a fresh chat
+knows nothing, and a coach that has not read it writes Weeks the import rejects.
+
+**Registry export**:
+Every `movementId` an import has registered, so the coach reuses ids instead of
+inventing them. Global rather than per-athlete — ids are shared vocabulary.

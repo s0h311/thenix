@@ -3,6 +3,7 @@ import { day, dayLog, exercise, log, movement, week } from '../../infrastructure
 import { dateOfDay } from './dayDate.ts'
 import { forCoach } from './forCoach.ts'
 import { parseWeek } from './parseWeek.ts'
+import { schemaForCoach } from './weekSchema.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
 import type { PlannedWeek } from './forCoach.ts'
 import type { CurrentDay, Day, Difficulty, Exercise, ImportResult, Log, Orphan, Week, WeekOnShelf } from './types.ts'
@@ -284,6 +285,26 @@ export function createTraining({ database }: Dependencies) {
       const planned = await loadWeek({ userId, number })
 
       return planned === null ? null : JSON.stringify(forCoach(planned), null, 2)
+    },
+
+    /**
+     * The contract the coach writes to, as the text it is pasted into a fresh chat
+     * as. It is the same for every athlete, so it takes nothing: the session the
+     * action resolves is what says who may ask for it.
+     */
+    async exportSchema(): Promise<string> {
+      return schemaForCoach()
+    },
+
+    /**
+     * Every `movementId` an import has registered, so the coach reuses ids instead of
+     * inventing them — which is what makes a twenty-Week Movement chart possible. The
+     * registry is global by design, so this asks for no athlete either.
+     */
+    async exportRegistry(): Promise<string> {
+      const rows = await database.select({ id: movement.id }).from(movement).orderBy(asc(movement.id))
+
+      return JSON.stringify({ movementIds: rows.map((row) => row.id) }, null, 2)
     },
 
     /**

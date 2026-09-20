@@ -1243,3 +1243,78 @@ describe('the shelf', () => {
     expect(await training.listWeeks({ userId: other, today: '2025-08-27' })).toEqual([])
   })
 })
+
+describe('the contract the coach writes to', () => {
+  test('the schema exports as JSON, naming what a Week must carry', async () => {
+    const { training } = await openApp()
+
+    const schema = JSON.parse(await training.exportSchema())
+
+    expect(schema.required).toEqual(['number', 'days'])
+    expect(Object.keys(schema.properties)).toEqual(['number', 'notes', 'days'])
+  })
+
+  test('the schema says what an Exercise cannot be written without', async () => {
+    const { training } = await openApp()
+
+    const schema = JSON.parse(await training.exportSchema())
+    const exercise = schema.properties.days.items.properties.exercises.items
+
+    expect(exercise.required).toEqual(['key', 'movementId', 'name', 'prescription', 'raw'])
+  })
+
+  test('the Prescription is in the schema under its own name, so a round can hold one', async () => {
+    const { training } = await openApp()
+
+    const schema = JSON.parse(await training.exportSchema())
+    const prescription = schema.$defs.Prescription
+    const rounds = prescription.oneOf.find((one: any) => one.properties.kind.const === 'rounds')
+
+    expect(prescription.oneOf.map((one: any) => one.properties.kind.const)).toEqual([
+      'reps',
+      'time',
+      'distance',
+      'rounds',
+    ])
+    expect(rounds.properties.work.$ref).toBe('#/$defs/Prescription')
+  })
+})
+
+describe('the Movement list the coach reuses', () => {
+  test('the ids the imports registered export as JSON', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 9, startDate: '2025-06-05' })
+
+    const { movementIds } = JSON.parse(await training.exportRegistry())
+
+    expect(movementIds).toContain('pull-up')
+    expect(movementIds).toContain('scapular-pull')
+  })
+
+  test('a Movement trained in several Weeks is listed once', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 15, startDate: '2025-07-31' })
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const { movementIds } = JSON.parse(await training.exportRegistry())
+
+    expect(movementIds.filter((id: string) => id === 'dip')).toEqual(['dip'])
+  })
+
+  test('the registry is global: what another athlete registered is there to reuse', async () => {
+    const { training, database } = await openApp()
+    const other = await signUp({ database, email: 'other@example.com' })
+
+    await importedWeek({ training, athlete: other, number: 20, startDate: '2025-08-25' })
+
+    expect(JSON.parse(await training.exportRegistry()).movementIds).toContain('dip')
+  })
+
+  test('before any import the list is empty rather than missing', async () => {
+    const { training } = await openApp()
+
+    expect(JSON.parse(await training.exportRegistry())).toEqual({ movementIds: [] })
+  })
+})

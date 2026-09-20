@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CopyButton } from './CopyButton.tsx'
 import { asDate, asLoad, asPrescribed, asRest } from '../../libs/Training/notation.ts'
 import type { ChangeEvent, MouseEvent } from 'react'
 import type { Day, Difficulty, Exercise, Log, Orphan, Week } from '../../../shared/training.ts'
@@ -470,40 +471,13 @@ function WeekNotes({ notes }: { notes: string | null }) {
  * reads the JSON, and the coach is handed it with a paste.
  */
 function Export({ onExport }: { onExport: () => Promise<void> }) {
-  const [handed, setHanded] = useState<'untouched' | 'copying' | 'copied' | 'failed'>('untouched')
-
-  async function hand() {
-    setHanded('copying')
-
-    try {
-      await onExport()
-      setHanded('copied')
-    } catch {
-      // Saying nothing would look exactly like success, and the athlete would paste
-      // whatever was on the clipboard before.
-      setHanded('failed')
-    }
-  }
-
   return (
-    <section className='space-y-2'>
-      <button
-        type='button'
-        onClick={hand}
-        disabled={handed === 'copying'}
-        className='w-full rounded-md border border-brand px-3 py-2 font-semibold text-brand disabled:opacity-60'
-      >
-        Export for coach
-      </button>
-      {handed === 'untouched' || handed === 'copying' ? null : (
-        <p
-          aria-live='polite'
-          className='text-sm font-semibold'
-        >
-          {handed === 'copied' ? 'Copied — paste it to your coach.' : 'The Week could not be copied. Try again.'}
-        </p>
-      )}
-    </section>
+    <CopyButton
+      label='Export for coach'
+      copied='Copied — paste it to your coach.'
+      failed='The Week could not be copied. Try again.'
+      onCopy={onExport}
+    />
   )
 }
 
