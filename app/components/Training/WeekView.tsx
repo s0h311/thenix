@@ -320,7 +320,7 @@ function LogControls({
 
   const chosen = log?.kind === 'difficulty' ? log.difficulty : null
 
-  function send(entry: Log) {
+  function send(entry: Log | null) {
     onLog({ dayOrdinal, exerciseKey: exercise.key, log: entry })
   }
 
@@ -336,12 +336,15 @@ function LogControls({
     setNote(event.currentTarget.value)
   }
 
-  /** The note is saved the moment it is left alone — it keeps whatever was tapped. */
+  /**
+   * The note is saved the moment it is left alone — it keeps whatever was tapped, and
+   * emptying a note that was the whole Log takes that Log back.
+   */
   function keep() {
-    const entry = noteOf({ log, note })
+    const recorded = noteOf({ log, note })
 
-    if (entry !== null) {
-      send(entry)
+    if (recorded !== null) {
+      send(recorded.log)
     }
   }
 

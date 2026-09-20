@@ -939,6 +939,87 @@ describe('logging what happened', () => {
     expect(exerciseIn(week, { ordinal: 1, key: 'dips' }).log).toEqual({ kind: 'note', note: 'back hurt' })
   })
 
+  test('a note written by mistake is taken back, leaving the Exercise unlogged', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'note', note: 'bakc hrut' },
+    })
+
+    const day = await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: null,
+    })
+
+    expect(day?.exercises.find((one) => one.key === 'dips')?.log).toBe(null)
+  })
+
+  test('the Day a taken-back Log finished stands open again — unlogged is not answered', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await logEvery({ training, athlete, number: 20, ordinal: 1, except: ['dips'] })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'note', note: 'walked instead' },
+    })
+
+    const finished = await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS })
+
+    expect(dayIn(finished, 1).complete).toBe(true)
+
+    const day = await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: null,
+    })
+
+    expect(day?.complete).toBe(false)
+  })
+
+  test('a Log taken back is not handed to the coach', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'note', note: 'meant for another Exercise' },
+    })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: null,
+    })
+
+    const exported = await exportedWeek({ training, athlete, number: 20 })
+
+    expect(exported.days[0].exercises.find((one: any) => one.key === 'dips').log).toBe(null)
+  })
+
   test('the left and right arm keep their own Logs, as they keep their own loads', async () => {
     const { training, athlete } = await openApp()
 

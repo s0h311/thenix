@@ -76,6 +76,8 @@ import can never fail.
 
 **Log**:
 The record of what the athlete actually did on a Day. Distinct from the coach's intent.
+A Log is the athlete's to take back: emptying a note that was the whole of one leaves
+the Exercise unlogged again. Only the coach's revision never deletes one — see Orphan.
 _Avoid_: Progress, result, history
 
 **Orphan**:

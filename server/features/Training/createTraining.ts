@@ -350,8 +350,10 @@ export function createTraining({ database }: Dependencies) {
 
     /**
      * Records what happened against one Exercise, replacing whatever was there — a
-     * mistap costs one more tap, never an undo. Null when the athlete has no such
-     * Exercise, which is the only way this can fail.
+     * mistap costs one more tap, never an undo. A null `log` is the Log taken back:
+     * a note written by mistake is the whole of what was recorded, so removing it
+     * leaves the Exercise unlogged rather than holding an empty Log open. Returns
+     * null when the athlete has no such Exercise, which is the only way this fails.
      */
     async logExercise({
       userId,
@@ -365,7 +367,7 @@ export function createTraining({ database }: Dependencies) {
       weekNumber: number
       dayOrdinal: number
       exerciseKey: string
-      log: Log
+      log: Log | null
       today: string
     }): Promise<Day | null> {
       const [found] = await database
@@ -387,12 +389,16 @@ export function createTraining({ database }: Dependencies) {
         return null
       }
 
-      const columns = columnsOf(entry)
+      if (entry === null) {
+        await database.delete(log).where(eq(log.exerciseId, found.id))
+      } else {
+        const columns = columnsOf(entry)
 
-      await database
-        .insert(log)
-        .values({ exerciseId: found.id, ...columns })
-        .onConflictDoUpdate({ target: log.exerciseId, set: { ...columns, loggedAt: new Date() } })
+        await database
+          .insert(log)
+          .values({ exerciseId: found.id, ...columns })
+          .onConflictDoUpdate({ target: log.exerciseId, set: { ...columns, loggedAt: new Date() } })
+      }
 
       const written = await readWeek({ userId, number: weekNumber, today })
 

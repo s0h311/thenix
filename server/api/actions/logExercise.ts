@@ -19,7 +19,8 @@ const bodySchema = z.object({
   weekNumber: z.number().int(),
   dayOrdinal: z.number().int(),
   exerciseKey: z.string(),
-  log: logSchema,
+  /** Null takes the Log back: the note that was the whole of it has been removed. */
+  log: logSchema.nullable(),
 })
 
 export default defineEventHandler(async (event) => {

@@ -71,21 +71,18 @@ describe('what a tap records', () => {
 
 describe('what leaving the note alone records', () => {
   test('a note with no rating is a Log in its own right', () => {
-    expect(noteOf({ log: null, note: 'back hurt' })).toEqual({ kind: 'note', note: 'back hurt' })
+    expect(noteOf({ log: null, note: 'back hurt' })).toEqual({ log: { kind: 'note', note: 'back hurt' } })
   })
 
   test('a note written after a rating keeps the rating', () => {
     expect(noteOf({ log: { kind: 'difficulty', difficulty: 'challenging', note: null }, note: 'did 4x8' })).toEqual({
-      kind: 'difficulty',
-      difficulty: 'challenging',
-      note: 'did 4x8',
+      log: { kind: 'difficulty', difficulty: 'challenging', note: 'did 4x8' },
     })
   })
 
   test('a note written against a skip keeps the skip', () => {
     expect(noteOf({ log: { kind: 'skipped', note: null }, note: 'shoulder' })).toEqual({
-      kind: 'skipped',
-      note: 'shoulder',
+      log: { kind: 'skipped', note: 'shoulder' },
     })
   })
 
@@ -99,20 +96,21 @@ describe('what leaving the note alone records', () => {
 
   test('clearing the note leaves the rating standing', () => {
     expect(noteOf({ log: { kind: 'difficulty', difficulty: 'easy', note: 'felt light' }, note: '' })).toEqual({
-      kind: 'difficulty',
-      difficulty: 'easy',
-      note: null,
+      log: { kind: 'difficulty', difficulty: 'easy', note: null },
     })
   })
 
-  test('a note standing on its own cannot be emptied — there is no Log left to record', () => {
-    expect(noteOf({ log: { kind: 'note', note: 'walked' }, note: '' })).toBe(null)
+  test('emptying a note standing on its own takes the Log back — it was the whole of it', () => {
+    expect(noteOf({ log: { kind: 'note', note: 'walked' }, note: '' })).toEqual({ log: null })
+  })
+
+  test('whitespace does not keep a note standing on its own alive either', () => {
+    expect(noteOf({ log: { kind: 'note', note: 'walked' }, note: '  ' })).toEqual({ log: null })
   })
 
   test('rewriting a note standing on its own replaces it', () => {
     expect(noteOf({ log: { kind: 'note', note: 'walked' }, note: 'walked 5km' })).toEqual({
-      kind: 'note',
-      note: 'walked 5km',
+      log: { kind: 'note', note: 'walked 5km' },
     })
   })
 })
@@ -142,6 +140,13 @@ describe('the Log shown against an Exercise', () => {
 
     expect(logFor({ taps, dayOrdinal: 1, exercise: exercise({ key: 'curl-left', side: 'left' }) })).not.toBe(null)
     expect(logFor({ taps, dayOrdinal: 1, exercise: exercise({ key: 'curl-right', side: 'right' }) })).toBe(null)
+  })
+
+  test('a Log taken back stands in front of what arrived, so the Exercise reads as unlogged', () => {
+    const arrived: Log = { kind: 'note', note: 'bakc hrut' }
+    const taps = withTap(noTaps, { dayOrdinal: 1, exerciseKey: 'dips', log: null })
+
+    expect(logFor({ taps, dayOrdinal: 1, exercise: exercise({ log: arrived }) })).toBe(null)
   })
 
   test('the same Exercise on another Day is another Log — logging Day 6 does not log Day 1', () => {
@@ -176,6 +181,14 @@ describe('how much of the Day is left', () => {
     const today = day({ exercises: [exercise({ key: 'dips', log: { kind: 'skipped', note: null } })] })
 
     expect(tally({ taps: noTaps, day: today }).complete).toBe(true)
+  })
+
+  test('taking the last Log back holds the Day open again', () => {
+    const today = day({ exercises: [exercise({ key: 'dips', log: { kind: 'note', note: 'walked' } })] })
+    const taps = withTap(noTaps, { dayOrdinal: 1, exerciseKey: 'dips', log: null })
+
+    expect(tally({ taps: noTaps, day: today })).toEqual({ done: 1, asked: 1, complete: true })
+    expect(tally({ taps, day: today })).toEqual({ done: 0, asked: 1, complete: false })
   })
 
   test('an all-optional Day is done, so active recovery never reads as falling behind', () => {
