@@ -28,11 +28,14 @@ export function WeekView({
   day,
   onLog,
   onNote,
+  onExport,
 }: {
   week: Week
   day: Day | null
   onLog: (entry: Logged) => void
   onNote: (entry: Noted) => void
+  /** Puts this Week, Logs and all, where the coach can be handed it. */
+  onExport: () => Promise<void>
 }) {
   const [openOrdinal, setOpenOrdinal] = useState<number | null>(day?.ordinal ?? null)
   // What has been tapped since the screen opened. The tap is the save, so the screen
@@ -71,6 +74,8 @@ export function WeekView({
       )}
 
       <WeekNotes notes={week.notes} />
+
+      <Export onExport={onExport} />
 
       <DayStrip
         week={week}
@@ -457,6 +462,49 @@ function WeekNotes({ notes }: { notes: string | null }) {
         {shown ? 'Hide Week notes' : 'Week notes'}
       </button>
       {shown ? <p className='whitespace-pre-wrap text-sm'>{notes}</p> : null}
+    </section>
+  )
+}
+
+/**
+ * The other end of the loop: the Week, its Logs and the work the plan dropped, on
+ * the clipboard in one tap. Nothing is shown of what was copied — the athlete never
+ * reads the JSON, and the coach is handed it with a paste.
+ */
+function Export({ onExport }: { onExport: () => Promise<void> }) {
+  const [handed, setHanded] = useState<'untouched' | 'copying' | 'copied' | 'failed'>('untouched')
+
+  async function hand() {
+    setHanded('copying')
+
+    try {
+      await onExport()
+      setHanded('copied')
+    } catch {
+      // Saying nothing would look exactly like success, and the athlete would paste
+      // whatever was on the clipboard before.
+      setHanded('failed')
+    }
+  }
+
+  return (
+    <section className='space-y-2'>
+      <button
+        type='button'
+        onClick={hand}
+        disabled={handed === 'copying'}
+        className='w-full rounded-md border border-brand px-3 py-2 font-semibold text-brand disabled:opacity-60'
+      >
+        Export for coach
+      </button>
+      {handed === 'untouched' || handed === 'copying' ? null : (
+        <p
+          aria-live='polite'
+          className='text-sm font-semibold'
+        >
+          {handed === 'copied' ? 'Copied — paste it to your coach.' : 'The Week could not be copied. Try again.'}
+        </p>
+      )}
     </section>
   )
 }

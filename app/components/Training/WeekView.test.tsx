@@ -178,10 +178,12 @@ function openApp({
   day,
   onLog = () => {},
   onNote = () => {},
+  onExport = async () => {},
 }: {
   day: Day | null
   onLog?: (entry: Logged) => void
   onNote?: (entry: Noted) => void
+  onExport?: () => Promise<void>
 }) {
   const container = document.createElement('div')
 
@@ -192,6 +194,7 @@ function openApp({
       day={day}
       onLog={onLog}
       onNote={onNote}
+      onExport={onExport}
     />,
   )
 
@@ -454,5 +457,42 @@ describe('the Day as a whole', () => {
     const { screen } = openTraining({ day: dayOf(4) })
 
     await expect.element(screen.getByText(/Day done/)).toBeVisible()
+  })
+})
+
+describe('handing the Week to the coach', () => {
+  test('one tap hands the whole Week over', async () => {
+    let handed = 0
+    const screen = openApp({
+      day: dayOf(1),
+      onExport: async () => {
+        handed += 1
+      },
+    })
+
+    await screen.getByRole('button', { name: /Export for coach/ }).click()
+
+    expect(handed).toBe(1)
+  })
+
+  test('the athlete is told where the Week went — a paste is the rest of it', async () => {
+    const screen = openApp({ day: dayOf(1), onExport: async () => {} })
+
+    await screen.getByRole('button', { name: /Export for coach/ }).click()
+
+    await expect.element(screen.getByText(/Copied/)).toBeVisible()
+  })
+
+  test('an export that did not happen says so, rather than looking like one that did', async () => {
+    const screen = openApp({
+      day: dayOf(1),
+      onExport: async () => {
+        throw new Error('no')
+      },
+    })
+
+    await screen.getByRole('button', { name: /Export for coach/ }).click()
+
+    await expect.element(screen.getByText(/could not be copied/)).toBeVisible()
   })
 })

@@ -65,6 +65,21 @@ async function importedWeek({
   return result.week
 }
 
+/** The Week as it leaves for the coach — JSON text, read back to look inside. */
+async function exportedWeek({
+  training,
+  athlete,
+  number,
+}: Pick<App, 'training' | 'athlete'> & { number: number }): Promise<any> {
+  const json = await training.exportWeek({ userId: athlete, number })
+
+  if (json === null) {
+    throw new Error(`week ${number} did not export`)
+  }
+
+  return JSON.parse(json)
+}
+
 function dayIn(week: Week | null, ordinal: number): Day {
   const found = week?.days.find((day) => day.ordinal === ordinal)
 
@@ -1046,5 +1061,127 @@ describe('a Day finishing on its own', () => {
 
     expect(dayIn(await training.getWeek({ userId: athlete, number: 20, today: '2025-08-28' }), 4).complete).toBe(false)
     expect(dayIn(await training.getWeek({ userId: athlete, number: 20, today: '2025-08-29' }), 4).complete).toBe(true)
+  })
+})
+
+describe('handing the Week back to the coach', () => {
+  test('the Week exports as JSON, the plan as the coach wrote it', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const exported = await exportedWeek({ training, athlete, number: 20 })
+
+    expect(exported.number).toBe(20)
+    expect(exported.startDate).toBe('2025-08-25')
+    expect(exported.days.map((day: any) => day.ordinal)).toEqual([1, 2, 3, 4, 5, 6, 7])
+    expect(exported.days[0].exercises[3]).toMatchObject({
+      key: 'dips',
+      movementId: 'dip',
+      name: 'Dips',
+      variant: 'ROM ~120°',
+      prescription: { kind: 'reps', sets: 3, reps: { min: 6, max: 6 } },
+      raw: 'Dips, ROM ~120°: 3×6, slow — deepened, 2 clean partial weeks banked. Reps hold.',
+    })
+  })
+
+  test('what the athlete recorded rides back with the Exercise it happened on', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'challenging', note: 'ROM held' },
+    })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'pike-push-ups',
+      log: { kind: 'skipped', note: null },
+    })
+
+    const exercises = (await exportedWeek({ training, athlete, number: 20 })).days[0].exercises
+    const logOf = (key: string) => exercises.find((one: any) => one.key === key).log
+
+    expect(logOf('dips')).toEqual({ kind: 'difficulty', difficulty: 'challenging', note: 'ROM held' })
+    expect(logOf('pike-push-ups')).toEqual({ kind: 'skipped', note: null })
+    // Unlogged is its own answer: the coach reads it as work that did not happen.
+    expect(logOf('hollow-body')).toBeNull()
+  })
+
+  test('the Day\u2019s own note goes too, on a rest Day as much as a training one', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logDay({ userId: athlete, today: AFTERWARDS, weekNumber: 20, dayOrdinal: 4, note: 'walked 5km' })
+
+    const rest = (await exportedWeek({ training, athlete, number: 20 })).days[3]
+
+    expect(rest.kind).toBe('rest')
+    expect(rest.log).toBe('walked 5km')
+    // The coach's own words about the Day come back beside the athlete's.
+    expect(rest.notes).toBe('Walk optional.')
+  })
+
+  test('work against an Exercise the coach dropped is exported, named as an orphan', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'good', note: 'did them anyway' },
+    })
+
+    await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      startDate: '2025-08-25',
+      json: coachJsonWith(20, (week) => {
+        week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
+      }),
+    })
+
+    const exported = await exportedWeek({ training, athlete, number: 20 })
+
+    expect(exported.days[0].exercises.map((one: any) => one.key)).not.toContain('dips')
+    expect(exported.days[0].orphans).toEqual([
+      expect.objectContaining({
+        key: 'dips',
+        name: 'Dips',
+        log: { kind: 'difficulty', difficulty: 'good', note: 'did them anyway' },
+      }),
+    ])
+    // A Day nothing was dropped from says so by having no orphans at all.
+    expect(exported.days[1].orphans).toBeUndefined()
+  })
+
+  test('any Week exports, not only the one being trained', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 9, startDate: '2025-06-05' })
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    expect((await exportedWeek({ training, athlete, number: 9 })).days.map((day: any) => day.ordinal)).toEqual([
+      5, 6, 7,
+    ])
+  })
+
+  test('an athlete cannot export a Week that is not theirs', async () => {
+    const { training, athlete, database } = await openApp()
+    const other = await signUp({ database, email: 'other@example.com' })
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    expect(await training.exportWeek({ userId: other, number: 20 })).toBeNull()
   })
 })

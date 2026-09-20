@@ -1,8 +1,10 @@
 import { and, asc, eq, inArray, max, notExists, notInArray } from 'drizzle-orm'
 import { day, dayLog, exercise, log, movement, week } from '../../infrastructure/Database/schemas/public.ts'
 import { dateOfDay } from './dayDate.ts'
+import { forCoach } from './forCoach.ts'
 import { parseWeek } from './parseWeek.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
+import type { PlannedWeek } from './forCoach.ts'
 import type { CurrentDay, Day, Difficulty, Exercise, ImportResult, Log, Orphan, Week } from './types.ts'
 import type { ImportedWeek } from './weekSchema.ts'
 
@@ -17,15 +19,8 @@ type ExerciseRow = { exercise: typeof exercise.$inferSelect; log: typeof log.$in
  * Movement registry, the rows — is internal; callers see Weeks and Days.
  */
 export function createTraining({ database }: Dependencies) {
-  async function readWeek({
-    userId,
-    number,
-    today,
-  }: {
-    userId: string
-    number: number
-    today: string
-  }): Promise<Week | null> {
+  /** The Week as it stands: the plan, and every Log written against it. */
+  async function loadWeek({ userId, number }: { userId: string; number: number }): Promise<PlannedWeek | null> {
     const [weekRow] = await database
       .select()
       .from(week)
@@ -83,9 +78,33 @@ export function createTraining({ database }: Dependencies) {
           log: dayLogRow?.note ?? null,
           exercises,
           orphans,
-          complete: isComplete({ kind, date: dated.date, exercises, today }),
         }
       }),
+    }
+  }
+
+  /**
+   * The same Week, read on a given day: completion is the one thing a Week cannot be
+   * read without a clock, because a rest Day finishes by the calendar and nothing else.
+   */
+  async function readWeek({
+    userId,
+    number,
+    today,
+  }: {
+    userId: string
+    number: number
+    today: string
+  }): Promise<Week | null> {
+    const planned = await loadWeek({ userId, number })
+
+    if (planned === null) {
+      return null
+    }
+
+    return {
+      ...planned,
+      days: planned.days.map((day) => ({ ...day, complete: isComplete({ ...day, today }) })),
     }
   }
 
@@ -256,6 +275,16 @@ export function createTraining({ database }: Dependencies) {
     },
 
     getWeek: readWeek,
+
+    /**
+     * The Week handed back to the coach, as the JSON text it is pasted as. Null when
+     * the athlete has no such Week, which is the only way this can fail.
+     */
+    async exportWeek({ userId, number }: { userId: string; number: number }): Promise<string | null> {
+      const planned = await loadWeek({ userId, number })
+
+      return planned === null ? null : JSON.stringify(forCoach(planned), null, 2)
+    },
 
     /**
      * Records what happened against one Exercise, replacing whatever was there — a

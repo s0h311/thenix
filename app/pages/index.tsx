@@ -3,6 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { Mark } from '../components/Brand/Mark.tsx'
 import { WeekView } from '../components/Training/WeekView.tsx'
+import { copyWeek } from '../libs/Training/export.ts'
 import type { Logged, Noted } from '../components/Training/WeekView.tsx'
 import type { CurrentDay } from '../../shared/training.ts'
 
@@ -101,6 +102,7 @@ function HomePage() {
       day={data.current.day}
       onLog={(entry) => log({ weekNumber, entry })}
       onNote={(entry) => note({ weekNumber, entry })}
+      onExport={() => copyWeek({ number: weekNumber })}
     />
   )
 }
