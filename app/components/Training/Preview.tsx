@@ -34,7 +34,7 @@ export function Preview({
       <h2 className='text-xl font-semibold'>Week {preview.number}, as it read</h2>
       <p>Check this is the Week your coach wrote, then pick the day it starts.</p>
       {revising === null ? null : (
-        <p className='rounded-md bg-brand-surface px-3 py-2 font-semibold text-brand'>
+        <p className='rounded-md bg-legacy-surface px-3 py-2 font-semibold text-legacy'>
           {asRevision({ number: preview.number, revising })}
         </p>
       )}
@@ -67,13 +67,13 @@ export function Preview({
           required
           value={startsOn}
           onChange={(event) => setStartsOn(event.target.value)}
-          className='rounded-md bg-brand-surface px-3 py-2 font-normal text-brand'
+          className='rounded-md bg-legacy-surface px-3 py-2 font-normal text-legacy'
         />
       </label>
       {moving === null ? null : (
         <p
           aria-live='polite'
-          className='rounded-md border border-brand px-3 py-2 font-semibold text-brand'
+          className='rounded-md border border-legacy px-3 py-2 font-semibold text-legacy'
         >
           {moving}
         </p>
@@ -81,14 +81,14 @@ export function Preview({
       <button
         type='button'
         onClick={() => onConfirm(startsOn)}
-        className='w-full rounded-md bg-brand px-3 py-2 font-semibold text-white'
+        className='w-full rounded-md bg-legacy px-3 py-2 font-semibold text-white'
       >
         {asImport({ number: preview.number, revising })}
       </button>
       <button
         type='button'
         onClick={onBack}
-        className='w-full rounded-md border border-brand px-3 py-2 font-semibold text-brand'
+        className='w-full rounded-md border border-legacy px-3 py-2 font-semibold text-legacy'
       >
         Paste a different Week
       </button>

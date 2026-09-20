@@ -6,7 +6,7 @@ export function AppHeader() {
   const { data: session } = authClient.useSession()
 
   return (
-    <header className='bg-brand-surface'>
+    <header className='bg-legacy-surface'>
       <div className='mx-auto flex max-w-3xl items-center justify-between px-4 py-3'>
         <Link to='/'>
           <Logo />
@@ -15,14 +15,14 @@ export function AppHeader() {
           {session ? (
             <Link
               to='/weeks'
-              className='font-semibold text-brand'
+              className='font-semibold text-legacy'
             >
               Weeks
             </Link>
           ) : null}
           <Link
             to={session ? '/account' : '/sign-in'}
-            className='font-semibold text-brand'
+            className='font-semibold text-legacy'
           >
             {session ? 'Account' : 'Sign in'}
           </Link>

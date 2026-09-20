@@ -39,7 +39,7 @@ function HomePage() {
       <Nothing message='Sign in to see today’s training.'>
         <Link
           to='/sign-in'
-          className='inline-block rounded-md bg-brand px-3 py-2 font-semibold text-white'
+          className='inline-block rounded-md bg-legacy px-3 py-2 font-semibold text-white'
         >
           Sign in
         </Link>
@@ -52,7 +52,7 @@ function HomePage() {
       <Nothing message='No Week covers today. Import the Week your coach wrote.'>
         <Link
           to='/import'
-          className='inline-block rounded-md bg-brand px-3 py-2 font-semibold text-white'
+          className='inline-block rounded-md bg-legacy px-3 py-2 font-semibold text-white'
         >
           Import a Week
         </Link>

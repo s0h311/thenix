@@ -1,12 +1,127 @@
 @import 'tailwindcss';
 
 /*
- * The brand is the two colours already in the logo, taken from the amber scale
- * rather than restated as literals so the rest of the palette stays consistent.
- * --color-brand carries text and primary actions; --color-brand-surface carries
- * surfaces and highlights.
+ * One semantic token set, two schemes.
+ *
+ * Two rules govern what is below. Neither is enforced by a test — both are
+ * review concerns, and the names are picked so that breaking one is visible in
+ * a diff:
+ *
+ * 1. Nothing here is a colour literal. Every value is a step of a Tailwind
+ *    scale — amber because it is the hue already in the logo, stone because a
+ *    warm neutral is the only neutral that does not go grey beside amber.
+ * 2. The brand is a fill, never a word. It is picked bright enough that text
+ *    set in it would fail contrast, which is the point: it is reserved for the
+ *    one primary action on a screen and for marking where the athlete is, and
+ *    it carries a near-black `on-brand` foreground rather than white. It may
+ *    not be a text colour, a border, an input background, a card background or
+ *    a row background.
+ *
+ * Dark mode is a token concern, not a component concern: the tokens are
+ * re-declared under the dark media query at the foot of this file, so no
+ * component in the app carries a dark variant.
  */
 @theme {
-  --color-brand: var(--color-amber-900);
-  --color-brand-surface: var(--color-amber-200);
+  /* Surfaces, hairline, and the three weights of ink. */
+  --color-page: var(--color-stone-50);
+  --color-raised: var(--color-white);
+  --color-sunken: var(--color-stone-100);
+  --color-hairline: var(--color-stone-200);
+  --color-ink: var(--color-stone-900);
+  --color-ink-muted: var(--color-stone-600);
+  --color-ink-faint: var(--color-stone-500);
+
+  /* The accent. `brand-soft` is the wash behind a marked thing; `on-brand` is
+   * the only foreground allowed on top of a brand fill. */
+  --color-brand: var(--color-amber-400);
+  --color-brand-soft: var(--color-amber-100);
+  --color-on-brand: var(--color-stone-950);
+
+  /* The warning quartet. Rose, not amber: an Unsaved Log must not read as the
+   * brand, and so must not read as something to press. */
+  --color-warning: var(--color-rose-700);
+  --color-warning-soft: var(--color-rose-50);
+  --color-warning-ink: var(--color-rose-900);
+  --color-warning-line: var(--color-rose-200);
+
+  /* The screens this redesign has not reached yet are still authored against
+   * the old two-colour theme. These go as each screen is rebuilt. */
+  --color-legacy: var(--color-amber-900);
+  --color-legacy-surface: var(--color-amber-200);
+
+  /* The athlete's own phone, so nothing shifts or falls back when the gym has
+   * no signal. */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* A scale named for the role a line plays, like the colours above, so that a
+   * Focus, a Prescription and a cue are chosen from rather than invented per
+   * screen. */
+  --text-display: 1.75rem;
+  --text-display--line-height: 2rem;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 600;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.75rem;
+  --text-title--letter-spacing: -0.01em;
+  --text-title--font-weight: 600;
+  --text-heading: 1.125rem;
+  --text-heading--line-height: 1.5rem;
+  --text-heading--font-weight: 600;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.25rem;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.125rem;
+}
+
+/* The tabular face, for the Prescription lines that later tickets set: numerals
+ * of one width, so that they line up down a Day. */
+@utility numerals {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Native controls — the Preview's date picker above all — follow the page. */
+:root {
+  color-scheme: light dark;
+}
+
+/*
+ * Dark mode follows the operating system; there is no in-app toggle. Unlayered,
+ * so these win over the `@theme` declarations above whatever their order.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-page: var(--color-stone-950);
+    --color-raised: var(--color-stone-900);
+    --color-sunken: var(--color-stone-800);
+    --color-hairline: var(--color-stone-700);
+    --color-ink: var(--color-stone-100);
+    --color-ink-muted: var(--color-stone-300);
+    --color-ink-faint: var(--color-stone-400);
+
+    --color-brand: var(--color-amber-300);
+    --color-brand-soft: var(--color-amber-950);
+
+    --color-warning: var(--color-rose-400);
+    --color-warning-soft: var(--color-rose-950);
+    --color-warning-ink: var(--color-rose-100);
+    --color-warning-line: var(--color-rose-900);
+
+    --color-legacy: var(--color-amber-200);
+    --color-legacy-surface: var(--color-amber-900);
+  }
+}
+
+/* One athlete's system setting, honoured everywhere at once. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -38,14 +38,14 @@ function AccountPage() {
       <button
         type='button'
         onClick={signOut}
-        className='w-full rounded-md bg-brand px-3 py-2 font-semibold text-white'
+        className='w-full rounded-md bg-legacy px-3 py-2 font-semibold text-white'
       >
         Sign out
       </button>
       <button
         type='button'
         onClick={deleteAccount}
-        className='w-full rounded-md border border-brand px-3 py-2 font-semibold text-brand'
+        className='w-full rounded-md border border-legacy px-3 py-2 font-semibold text-legacy'
       >
         Delete account
       </button>

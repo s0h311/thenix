@@ -25,7 +25,7 @@ export function Shelf({ weeks, onOpen }: { weeks: WeekOnShelf[]; onOpen: (number
             value={week.number}
             onClick={open}
             aria-current={week.current}
-            className='flex w-full flex-wrap items-baseline justify-between gap-2 rounded-md bg-brand-surface px-3 py-3 text-left aria-[current=true]:bg-brand aria-[current=true]:text-white'
+            className='flex w-full flex-wrap items-baseline justify-between gap-2 rounded-md bg-legacy-surface px-3 py-3 text-left aria-[current=true]:bg-legacy aria-[current=true]:text-white'
           >
             <span className='font-semibold'>Week {week.number}</span>
             {/* The mark is a word, not a colour: the fill alone would not survive a

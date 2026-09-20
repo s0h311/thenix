@@ -54,7 +54,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
       </head>
-      <body className='bg-white text-brand antialiased'>
+      <body className='min-h-dvh bg-page text-body text-ink antialiased'>
         {children}
         <Scripts />
       </body>

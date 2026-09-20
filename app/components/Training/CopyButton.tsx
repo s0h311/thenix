@@ -35,7 +35,7 @@ export function CopyButton({
         type='button'
         onClick={hand}
         disabled={handed === 'copying'}
-        className='w-full rounded-md border border-brand px-3 py-2 font-semibold text-brand disabled:opacity-60'
+        className='w-full rounded-md border border-legacy px-3 py-2 font-semibold text-legacy disabled:opacity-60'
       >
         {label}
       </button>

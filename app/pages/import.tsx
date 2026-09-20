@@ -99,12 +99,12 @@ function ImportPage() {
             aria-label='The coach’s Week, as JSON'
             value={json}
             onChange={(event) => setJson(event.target.value)}
-            className='w-full rounded-md bg-brand-surface px-3 py-2 font-mono text-sm text-brand placeholder:text-brand/60'
+            className='w-full rounded-md bg-legacy-surface px-3 py-2 font-mono text-sm text-legacy placeholder:text-legacy/60'
           />
           <button
             type='submit'
             disabled={working}
-            className='w-full rounded-md bg-brand px-3 py-2 font-semibold text-white disabled:opacity-60'
+            className='w-full rounded-md bg-legacy px-3 py-2 font-semibold text-white disabled:opacity-60'
           >
             {working ? 'Reading…' : 'Read it back'}
           </button>

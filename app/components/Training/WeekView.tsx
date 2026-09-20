@@ -116,13 +116,13 @@ function Unsaved({ unsaved, onRetry }: { unsaved: string | null; onRetry: () => 
   return (
     <section
       role='alert'
-      className='flex flex-wrap items-center gap-3 rounded-md border-2 border-brand bg-brand-surface px-3 py-2'
+      className='flex flex-wrap items-center gap-3 rounded-md border-2 border-legacy bg-legacy-surface px-3 py-2'
     >
       <p className='text-sm font-semibold'>{unsaved}</p>
       <button
         type='button'
         onClick={onRetry}
-        className='rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white'
+        className='rounded-md bg-legacy px-3 py-2 text-sm font-semibold text-white'
       >
         Save them now
       </button>
@@ -249,7 +249,7 @@ function DayNote({
         onBlur={keep}
         rows={2}
         placeholder='Anything about the Day itself'
-        className='w-full rounded-md border border-brand bg-white px-3 py-2 text-sm'
+        className='w-full rounded-md border border-legacy bg-white px-3 py-2 text-sm'
       />
     </div>
   )
@@ -272,7 +272,7 @@ function Orphans({ orphans }: { orphans: Orphan[] }) {
         {orphans.map((orphan) => (
           <li
             key={orphan.key}
-            className='space-y-1 rounded-md border border-brand px-3 py-2'
+            className='space-y-1 rounded-md border border-legacy px-3 py-2'
           >
             <p className='flex flex-wrap items-baseline gap-2'>
               <span className='font-semibold'>{named(orphan)}</span>
@@ -315,7 +315,7 @@ function ExerciseItem({
   onLog: (entry: Logged) => void
 }) {
   return (
-    <li className='space-y-1 rounded-md bg-brand-surface px-3 py-2'>
+    <li className='space-y-1 rounded-md bg-legacy-surface px-3 py-2'>
       <p className='flex flex-wrap items-baseline gap-2'>
         <span className='font-semibold'>{exercise.name}</span>
         {exercise.variant === null ? null : <span className='text-sm'>{exercise.variant}</span>}
@@ -337,7 +337,7 @@ function ExerciseItem({
       {exercise.cue === null ? null : <p className='text-sm'>{exercise.cue}</p>}
 
       {/* Raw is always shown: where the parse was partial, this line is the prescription. */}
-      <p className='text-sm text-brand/70'>{exercise.raw}</p>
+      <p className='text-sm text-legacy/70'>{exercise.raw}</p>
 
       <LogControls
         exercise={exercise}
@@ -429,7 +429,7 @@ function LogControls({
         onBlur={keep}
         rows={2}
         placeholder='Anything worth telling the coach'
-        className='w-full rounded-md border border-brand bg-white px-3 py-2 text-sm'
+        className='w-full rounded-md border border-legacy bg-white px-3 py-2 text-sm'
       />
     </div>
   )
@@ -459,7 +459,7 @@ function Chip({
       aria-label={name}
       aria-pressed={chosen}
       onClick={onChoose}
-      className='rounded-md border border-brand bg-white px-4 py-3 text-sm text-brand aria-pressed:bg-brand aria-pressed:font-semibold aria-pressed:text-white'
+      className='rounded-md border border-legacy bg-white px-4 py-3 text-sm text-legacy aria-pressed:bg-legacy aria-pressed:font-semibold aria-pressed:text-white'
     >
       {chosen ? <span aria-hidden='true'>✓ </span> : null}
       {label}
@@ -489,7 +489,7 @@ function WeekNotes({ notes }: { notes: string | null }) {
         type='button'
         onClick={toggle}
         aria-expanded={shown}
-        className='w-full rounded-md bg-brand px-3 py-2 font-semibold text-white'
+        className='w-full rounded-md bg-legacy px-3 py-2 font-semibold text-white'
       >
         {shown ? 'Hide Week notes' : 'Week notes'}
       </button>
@@ -533,7 +533,7 @@ function DayStrip({ week, open, onOpen }: { week: Week; open: number | null; onO
           value={day.ordinal}
           onClick={openDay}
           aria-current={day.ordinal === open}
-          className='rounded-md bg-brand-surface px-3 py-2 text-sm aria-[current=true]:bg-brand aria-[current=true]:text-white'
+          className='rounded-md bg-legacy-surface px-3 py-2 text-sm aria-[current=true]:bg-legacy aria-[current=true]:text-white'
         >
           Day {day.ordinal}
           {day.focus === null ? '' : ` · ${day.focus}`}

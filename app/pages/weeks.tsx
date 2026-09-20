@@ -69,7 +69,7 @@ function ShelfPage() {
         <p>Sign in to see your Weeks.</p>
         <Link
           to='/sign-in'
-          className='inline-block rounded-md bg-brand px-3 py-2 font-semibold text-white'
+          className='inline-block rounded-md bg-legacy px-3 py-2 font-semibold text-white'
         >
           Sign in
         </Link>
@@ -88,7 +88,7 @@ function ShelfPage() {
       <div className='space-y-6'>
         <Link
           to='/weeks'
-          className='font-semibold text-brand'
+          className='font-semibold text-legacy'
         >
           ← All Weeks
         </Link>
