@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { dismissed, held, landed, landingOf, nothingUnsaved, unsaved, unsavedAlert } from './saving.ts'
+import { dismissed, held, landed, landingOf, movedOn, nothingUnsaved, unsaved, unsavedAlert } from './saving.ts'
 import type { Save } from './saving.ts'
 import type { Difficulty } from '../../../shared/training.ts'
 
@@ -186,5 +186,23 @@ describe('a Save the server will not take', () => {
     const settled = landed(held(nothingUnsaved, { save: tap(), why: 'refused' }), tap({ difficulty: 'easy' }))
 
     expect(unsavedAlert(settled)).toBeNull()
+  })
+})
+
+describe('what a Save means for reading the Week back', () => {
+  test('a Save the server took moved what it holds, so the Week and the Shelf are read again', () => {
+    expect(movedOn('landed')).toBe(true)
+  })
+
+  test('a Save refused is the Week having moved past what is on screen, so it is read again too', () => {
+    expect(movedOn('refused')).toBe(true)
+  })
+
+  test('a Save held in a basement gym moved nothing — and a read that cannot reach the server either is what takes the Day off the screen mid-set', () => {
+    expect(movedOn('held')).toBe(false)
+  })
+
+  test('a session that ended moved nothing, and asking again only asks who is asking', () => {
+    expect(movedOn('signedOut')).toBe(false)
   })
 })

@@ -56,6 +56,22 @@ export function landingOf({ status }: { status: number | null }): Landing {
 }
 
 /**
+ * Whether the server's own record moved, and so has to be read back. Not every
+ * Landing is worth a read, and the two that are not are exactly the two where a
+ * read can only fail: a Save held in a basement gym never reached the server, and
+ * one stopped by an ended session never got past the door. Asking anyway is how a
+ * tap with no signal ends with the Day the athlete is training replaced by "could
+ * not be read" — the read fails, and a failed read is louder than the Save was.
+ *
+ * A refusal *is* the Week having moved: the server will not take a Log against an
+ * Exercise a Revision has since dropped, which means what is on screen is the older
+ * plan. That one is read back precisely because the athlete is looking at the past.
+ */
+export function movedOn(landing: Landing): boolean {
+  return landing === 'landed' || landing === 'refused'
+}
+
+/**
  * What the phone has taken and the server has not: keyed by what each Save records,
  * and carrying why the server has not got it. The reason rides along because it is
  * the whole of what the athlete can do next — a connection is waited out, a session

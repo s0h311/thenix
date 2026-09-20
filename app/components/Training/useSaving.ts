@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { sendSave } from '../../libs/Training/log.ts'
-import { dismissed, held, landed, nothingUnsaved, unsaved, unsavedAlert } from '../../libs/Training/saving.ts'
+import { dismissed, held, landed, movedOn, nothingUnsaved, unsaved, unsavedAlert } from '../../libs/Training/saving.ts'
 import type { Logged, Noted } from '../../libs/Training/logging.ts'
 
 /**
@@ -20,11 +20,19 @@ export function useSaving({ weekNumber, refresh }: { weekNumber: number; refresh
     mutationFn: sendSave,
     // One answer, four outcomes: `sendSave` does not throw, because what stopped a
     // Save is exactly what the athlete is told and what the bar's one button does.
-    onSuccess: (landing, save) =>
-      setOutbox((current) => (landing === 'landed' ? landed(current, save) : held(current, { save, why: landing }))),
-    // The Week is read back either way: a Save that failed leaves the screen showing
-    // the tap, and what the server does hold is still what it says it holds.
-    onSettled: () => queryClient.invalidateQueries({ queryKey: [refresh] }),
+    onSuccess: (landing, save) => {
+      setOutbox((current) => (landing === 'landed' ? landed(current, save) : held(current, { save, why: landing })))
+
+      // Only once the server has spoken about the Save itself. A Save that never
+      // reached it is not a reason to go asking again: that read fails too, and a
+      // failed read is what replaces the Day the athlete is mid-set on.
+      if (movedOn(landing)) {
+        void queryClient.invalidateQueries({ queryKey: [refresh] })
+        // And the Shelf, whose per-Day marks are these same Logs counted a level up:
+        // a Day trained off the shelf came back untouched on the way out of it.
+        void queryClient.invalidateQueries({ queryKey: ['shelf'] })
+      }
+    },
   })
 
   return {
