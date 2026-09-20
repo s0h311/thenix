@@ -48,7 +48,7 @@ function ImportPage() {
     const response = await fetch('/api/actions/importWeek', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ json, startDate }),
+      body: JSON.stringify({ json, startDate, today: today() }),
     })
 
     setResult((await response.json()) as ImportResult)

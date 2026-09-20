@@ -71,8 +71,19 @@ export type Day = {
   weekday: Weekday
   kind: 'training' | 'rest'
   focus: string | null
+  /** The coach's own words about this Day, as imported. */
   notes: string | null
+  /**
+   * The athlete's note on the Day as a whole — "swapped with day 4", "walked". Prose
+   * only: the three shapes of ADR 0003 belong to an Exercise, and a rest Day has none.
+   */
+  log: string | null
   exercises: Exercise[]
+  /**
+   * Derived on read, never stored and never tapped: a training Day is finished when
+   * every Exercise it asks for has a Log. Optional ones are not asked for.
+   */
+  complete: boolean
 }
 
 export type Week = {

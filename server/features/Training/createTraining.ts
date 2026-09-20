@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, max } from 'drizzle-orm'
-import { day, exercise, log, movement, week } from '../../infrastructure/Database/schemas/public.ts'
+import { day, dayLog, exercise, log, movement, week } from '../../infrastructure/Database/schemas/public.ts'
 import { dateOfDay } from './dayDate.ts'
 import { parseWeek } from './parseWeek.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
@@ -17,7 +17,15 @@ type ExerciseRow = { exercise: typeof exercise.$inferSelect; log: typeof log.$in
  * Movement registry, the rows — is internal; callers see Weeks and Days.
  */
 export function createTraining({ database }: Dependencies) {
-  async function readWeek({ userId, number }: { userId: string; number: number }): Promise<Week | null> {
+  async function readWeek({
+    userId,
+    number,
+    today,
+  }: {
+    userId: string
+    number: number
+    today: string
+  }): Promise<Week | null> {
     const [weekRow] = await database
       .select()
       .from(week)
@@ -27,7 +35,12 @@ export function createTraining({ database }: Dependencies) {
       return null
     }
 
-    const dayRows = await database.select().from(day).where(eq(day.weekId, weekRow.id)).orderBy(asc(day.ordinal))
+    const dayRows = await database
+      .select({ day, log: dayLog })
+      .from(day)
+      .leftJoin(dayLog, eq(dayLog.dayId, day.id))
+      .where(eq(day.weekId, weekRow.id))
+      .orderBy(asc(day.ordinal))
 
     // The Log rides along with the Exercise it belongs to: the screen that asks for
     // a Day always wants to know what already happened on it.
@@ -41,7 +54,7 @@ export function createTraining({ database }: Dependencies) {
             .where(
               inArray(
                 exercise.dayId,
-                dayRows.map((row) => row.id),
+                dayRows.map((row) => row.day.id),
               ),
             )
             .orderBy(asc(exercise.position))
@@ -50,14 +63,22 @@ export function createTraining({ database }: Dependencies) {
       number: weekRow.number,
       startDate: weekRow.startDate,
       notes: weekRow.notes,
-      days: dayRows.map((dayRow) => ({
-        ordinal: dayRow.ordinal,
-        ...dateOfDay({ startDate: weekRow.startDate, ordinal: dayRow.ordinal }),
-        kind: dayRow.kind as Day['kind'],
-        focus: dayRow.focus,
-        notes: dayRow.notes,
-        exercises: exerciseRows.filter((row) => row.exercise.dayId === dayRow.id).map(toExercise),
-      })),
+      days: dayRows.map(({ day: dayRow, log: dayLogRow }) => {
+        const kind = dayRow.kind as Day['kind']
+        const dated = dateOfDay({ startDate: weekRow.startDate, ordinal: dayRow.ordinal })
+        const exercises = exerciseRows.filter((row) => row.exercise.dayId === dayRow.id).map(toExercise)
+
+        return {
+          ordinal: dayRow.ordinal,
+          ...dated,
+          kind,
+          focus: dayRow.focus,
+          notes: dayRow.notes,
+          log: dayLogRow?.note ?? null,
+          exercises,
+          complete: isComplete({ kind, date: dated.date, exercises, today }),
+        }
+      }),
     }
   }
 
@@ -173,10 +194,12 @@ export function createTraining({ database }: Dependencies) {
       userId,
       json,
       startDate,
+      today,
     }: {
       userId: string
       json: string
       startDate: string
+      today: string
     }): Promise<ImportResult> {
       const parsed = parseWeek(json)
 
@@ -186,7 +209,7 @@ export function createTraining({ database }: Dependencies) {
 
       await writeWeek({ userId, startDate, imported: parsed.week })
 
-      const written = await readWeek({ userId, number: parsed.week.number })
+      const written = await readWeek({ userId, number: parsed.week.number, today })
 
       if (written === null) {
         throw new Error('the imported Week could not be read back')
@@ -208,12 +231,14 @@ export function createTraining({ database }: Dependencies) {
       dayOrdinal,
       exerciseKey,
       log: entry,
+      today,
     }: {
       userId: string
       weekNumber: number
       dayOrdinal: number
       exerciseKey: string
       log: Log
+      today: string
     }): Promise<Day | null> {
       const [found] = await database
         .select({ id: exercise.id })
@@ -240,9 +265,54 @@ export function createTraining({ database }: Dependencies) {
         .values({ exerciseId: found.id, ...columns })
         .onConflictDoUpdate({ target: log.exerciseId, set: { ...columns, loggedAt: new Date() } })
 
-      const written = await readWeek({ userId, number: weekNumber })
+      const written = await readWeek({ userId, number: weekNumber, today })
 
       return written?.days.find((one) => one.ordinal === dayOrdinal) ?? null
+    },
+
+    /**
+     * The athlete's note on the Day as a whole, replacing whatever was there. Null
+     * when the athlete has no such Day, which is the only way this can fail.
+     */
+    async logDay({
+      userId,
+      weekNumber,
+      dayOrdinal,
+      note,
+      today,
+    }: {
+      userId: string
+      weekNumber: number
+      dayOrdinal: number
+      note: string
+      today: string
+    }): Promise<Day | null> {
+      const [found] = await database
+        .select({ id: day.id })
+        .from(day)
+        .innerJoin(week, eq(week.id, day.weekId))
+        .where(and(eq(week.userId, userId), eq(week.number, weekNumber), eq(day.ordinal, dayOrdinal)))
+
+      if (found === undefined) {
+        return null
+      }
+
+      const trimmed = note.trim()
+
+      // Emptying the box is how a note is taken back — there is nothing else in a
+      // Day's Log to keep standing, so the row goes with it.
+      if (trimmed === '') {
+        await database.delete(dayLog).where(eq(dayLog.dayId, found.id))
+      } else {
+        await database
+          .insert(dayLog)
+          .values({ dayId: found.id, note: trimmed })
+          .onConflictDoUpdate({ target: dayLog.dayId, set: { note: trimmed, loggedAt: new Date() } })
+      }
+
+      const noted = await readWeek({ userId, number: weekNumber, today })
+
+      return noted?.days.find((one) => one.ordinal === dayOrdinal) ?? null
     },
 
     /** What the app opens on: today's Day, and the Week it sits in. */
@@ -253,7 +323,7 @@ export function createTraining({ database }: Dependencies) {
         return null
       }
 
-      const found = await readWeek({ userId, number })
+      const found = await readWeek({ userId, number, today })
 
       if (found === null) {
         return null
@@ -262,6 +332,31 @@ export function createTraining({ database }: Dependencies) {
       return { week: found, day: found.days.find((one) => one.date === today) ?? null }
     },
   }
+}
+
+/**
+ * Whether a Day has finished. Nothing stores this and nothing sets it: a training
+ * Day is done when every Exercise it asks for has been logged, and an Exercise the
+ * coach marked `(Optional)` is never one it asks for.
+ */
+function isComplete({
+  kind,
+  date,
+  exercises,
+  today,
+}: {
+  kind: Day['kind']
+  date: string
+  exercises: Exercise[]
+  today: string
+}): boolean {
+  // A rest Day asks for nothing, so the only thing that can finish it is the clock —
+  // and it is the athlete's clock, because that is where the resting happened.
+  if (kind === 'rest') {
+    return date < today
+  }
+
+  return exercises.every((one) => one.optional || one.log !== null)
 }
 
 function toExercise({ exercise: row, log: logRow }: ExerciseRow): Exercise {

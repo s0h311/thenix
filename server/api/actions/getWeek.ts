@@ -5,6 +5,8 @@ import { auth } from '../../infrastructure/Auth/auth.ts'
 
 const querySchema = z.object({
   number: z.coerce.number().int(),
+  /** A rest Day finishes by the clock, and it is the athlete's clock that counts. */
+  today: z.iso.date(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -14,7 +16,7 @@ export default defineEventHandler(async (event) => {
     throw new HTTPError({ status: 401 })
   }
 
-  const { number } = querySchema.parse(Object.fromEntries(new URL(event.req.url).searchParams))
+  const { number, today } = querySchema.parse(Object.fromEntries(new URL(event.req.url).searchParams))
 
-  return await training.getWeek({ userId: session.user.id, number })
+  return await training.getWeek({ userId: session.user.id, number, today })
 })

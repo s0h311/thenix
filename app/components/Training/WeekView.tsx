@@ -15,22 +15,41 @@ const RATINGS: { difficulty: Difficulty; label: string }[] = [
 /** One Log, named by where it belongs — logging acts on whichever Day is open. */
 export type Logged = { dayOrdinal: number; exerciseKey: string; log: Log }
 
+/** The Day's own note, which belongs to no Exercise on it. Empty takes it back. */
+export type Noted = { dayOrdinal: number; note: string }
+
 /**
  * The screen the athlete trains from. It opens on today's Day and never navigates
  * away from the Week: the other Days, and the Week's notes, are reachable from here
  * because a PAIN RULE is no use at the top of a document that has scrolled past.
  */
-export function WeekView({ week, day, onLog }: { week: Week; day: Day | null; onLog: (entry: Logged) => void }) {
+export function WeekView({
+  week,
+  day,
+  onLog,
+  onNote,
+}: {
+  week: Week
+  day: Day | null
+  onLog: (entry: Logged) => void
+  onNote: (entry: Noted) => void
+}) {
   const [openOrdinal, setOpenOrdinal] = useState<number | null>(day?.ordinal ?? null)
   // What has been tapped since the screen opened. The tap is the save, so the screen
   // answers from here rather than waiting for the Week to come back around.
   const [logged, setLogged] = useState<Record<string, Log>>({})
+  const [noted, setNoted] = useState<Record<number, string>>({})
 
   const open = week.days.find((one) => one.ordinal === openOrdinal) ?? null
 
   function record(entry: Logged) {
     setLogged((current) => ({ ...current, [`${entry.dayOrdinal}:${entry.exerciseKey}`]: entry.log }))
     onLog(entry)
+  }
+
+  function note(entry: Noted) {
+    setNoted((current) => ({ ...current, [entry.dayOrdinal]: entry.note }))
+    onNote(entry)
   }
 
   return (
@@ -45,7 +64,9 @@ export function WeekView({ week, day, onLog }: { week: Week; day: Day | null; on
           day={open}
           today={day}
           logged={logged}
+          note={noted[open.ordinal] ?? open.log}
           onLog={record}
+          onNote={note}
         />
       )}
 
@@ -64,12 +85,16 @@ function DayDetail({
   day,
   today,
   logged,
+  note,
   onLog,
+  onNote,
 }: {
   day: Day
   today: Day | null
   logged: Record<string, Log>
+  note: string | null
   onLog: (entry: Logged) => void
+  onNote: (entry: Noted) => void
 }) {
   return (
     <section className='space-y-4'>
@@ -79,6 +104,10 @@ function DayDetail({
           {day.ordinal === today?.ordinal ? ' · Today' : ''}
         </p>
         <h1 className='text-2xl font-semibold'>{day.focus ?? (day.kind === 'rest' ? 'Full Rest' : 'Training')}</h1>
+        <Progress
+          day={day}
+          logged={logged}
+        />
       </header>
 
       {day.kind === 'rest' ? (
@@ -98,7 +127,85 @@ function DayDetail({
           ))}
         </ul>
       )}
+
+      <DayNote
+        key={day.ordinal}
+        dayOrdinal={day.ordinal}
+        note={note}
+        onNote={onNote}
+      />
     </section>
+  )
+}
+
+/**
+ * How much of the Day is left, and whether it is over. Nothing here is a button: a
+ * Day finishes when the last Exercise it asks for is logged, or — for a rest Day,
+ * which asks for none — when its date has passed, which the server already derived.
+ */
+function Progress({ day, logged }: { day: Day; logged: Record<string, Log> }) {
+  const asked = day.exercises.filter((one) => !one.optional)
+  const done = asked.filter((one) => (logged[`${day.ordinal}:${one.key}`] ?? one.log) !== null).length
+  // The tapped state is what counts while training, so the line moves with the tap
+  // rather than with the round trip. A rest Day has nothing to tap, so it keeps the
+  // completion it was read with.
+  const complete = day.kind === 'rest' ? day.complete : done === asked.length
+
+  if (!complete && asked.length === 0) {
+    return null
+  }
+
+  return (
+    <p
+      aria-live='polite'
+      className='text-sm font-semibold'
+    >
+      {complete ? <span>✓ Day done</span> : <span>{`${done} of ${asked.length} logged`}</span>}
+    </p>
+  )
+}
+
+/**
+ * Somewhere to put what belongs to the Day and not to any Exercise on it — "swapped
+ * with day 4", "walked". It is on a rest Day too, which is the whole point: recording
+ * a walk must never require inventing an Exercise to hang it off.
+ */
+function DayNote({
+  dayOrdinal,
+  note,
+  onNote,
+}: {
+  dayOrdinal: number
+  note: string | null
+  onNote: (entry: Noted) => void
+}) {
+  const [text, setText] = useState(note ?? '')
+
+  function write(event: ChangeEvent<HTMLTextAreaElement>) {
+    setText(event.currentTarget.value)
+  }
+
+  /** Saved the moment it is left alone, like every other Log on this screen. */
+  function keep() {
+    if (text.trim() === (note ?? '')) {
+      return
+    }
+
+    onNote({ dayOrdinal, note: text.trim() })
+  }
+
+  return (
+    <div className='space-y-1'>
+      <textarea
+        aria-label={`Note on Day ${dayOrdinal}`}
+        value={text}
+        onChange={write}
+        onBlur={keep}
+        rows={2}
+        placeholder='Anything about the Day itself'
+        className='w-full rounded-md border border-brand bg-white px-3 py-2 text-sm'
+      />
+    </div>
   )
 }
 

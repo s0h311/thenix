@@ -6,6 +6,7 @@ import { auth } from '../../infrastructure/Auth/auth.ts'
 const bodySchema = z.object({
   json: z.string(),
   startDate: z.iso.date(),
+  today: z.iso.date(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -15,7 +16,7 @@ export default defineEventHandler(async (event) => {
     throw new HTTPError({ status: 401 })
   }
 
-  const { json, startDate } = await readValidatedBody(event, (body) => bodySchema.parse(body))
+  const { json, startDate, today } = await readValidatedBody(event, (body) => bodySchema.parse(body))
 
-  return await training.importWeek({ userId: session.user.id, json, startDate })
+  return await training.importWeek({ userId: session.user.id, json, startDate, today })
 })

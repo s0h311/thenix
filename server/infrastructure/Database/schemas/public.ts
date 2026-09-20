@@ -96,3 +96,21 @@ export const log = pgTable(
   },
   (table) => [unique('log_exercise_unique').on(table.exerciseId)],
 )
+
+/**
+ * The athlete's note on a Day as a whole — "swapped with day 4", "walked". Its own
+ * table rather than a column on `day`, because `day.notes` is the coach's and is
+ * rewritten by every import, while this is the athlete's and must outlive one.
+ */
+export const dayLog = pgTable(
+  'day_log',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    dayId: uuid('day_id')
+      .notNull()
+      .references(() => day.id, { onDelete: 'cascade' }),
+    note: text('note').notNull(),
+    loggedAt: timestamp('logged_at').defaultNow().notNull(),
+  },
+  (table) => [unique('day_log_day_unique').on(table.dayId)],
+)

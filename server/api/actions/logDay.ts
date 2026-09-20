@@ -3,23 +3,12 @@ import { z } from 'zod'
 import { training } from '../../features/Training/training.ts'
 import { auth } from '../../infrastructure/Auth/auth.ts'
 
-/** The three shapes of a Log (ADR 0003). Nothing here counts reps, and nothing will. */
-const logSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('skipped'), note: z.string().nullable() }),
-  z.object({
-    kind: z.literal('difficulty'),
-    difficulty: z.enum(['easy', 'good', 'challenging']),
-    note: z.string().nullable(),
-  }),
-  z.object({ kind: z.literal('note'), note: z.string().min(1) }),
-])
-
+/** Prose only: the Day's own note is what belongs to no Exercise on it. */
 const bodySchema = z.object({
   today: z.iso.date(),
   weekNumber: z.number().int(),
   dayOrdinal: z.number().int(),
-  exerciseKey: z.string(),
-  log: logSchema,
+  note: z.string(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -31,7 +20,7 @@ export default defineEventHandler(async (event) => {
 
   const body = await readValidatedBody(event, (input) => bodySchema.parse(input))
 
-  const day = await training.logExercise({ userId: session.user.id, ...body })
+  const day = await training.logDay({ userId: session.user.id, ...body })
 
   if (day === null) {
     throw new HTTPError({ status: 404 })

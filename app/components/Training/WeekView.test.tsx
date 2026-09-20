@@ -2,7 +2,7 @@ import { expect, describe, test } from 'vitest'
 import { page } from 'vitest/browser'
 import { createRoot } from 'react-dom/client'
 import { WeekView } from './WeekView.tsx'
-import type { Logged } from './WeekView.tsx'
+import type { Logged, Noted } from './WeekView.tsx'
 import type { Day, Week } from '../../../shared/training.ts'
 
 const WEEK: Week = {
@@ -17,6 +17,8 @@ const WEEK: Week = {
       kind: 'training',
       focus: 'Upper Push + Core',
       notes: null,
+      log: null,
+      complete: false,
       exercises: [
         {
           key: 'dips',
@@ -75,6 +77,9 @@ const WEEK: Week = {
       kind: 'rest',
       focus: 'Full Rest',
       notes: null,
+      log: null,
+      // Its Thursday has been and gone, and a rest Day asks for nothing else.
+      complete: true,
       exercises: [],
     },
     {
@@ -84,6 +89,8 @@ const WEEK: Week = {
       kind: 'training',
       focus: 'Zone 2 Run',
       notes: null,
+      log: null,
+      complete: false,
       exercises: [
         {
           key: 'zone-2-run',
@@ -109,7 +116,10 @@ const WEEK: Week = {
       weekday: 'sunday',
       kind: 'training',
       focus: 'Active Recovery',
-      notes: null,
+      notes: 'walked 5km instead',
+      log: 'walked 5km instead',
+      // Nothing on it is asked for, so there was never anything to finish.
+      complete: true,
       exercises: [
         {
           key: 'dead-hang',
@@ -143,7 +153,15 @@ function dayOf(ordinal: number): Day {
 }
 
 /** The screen the athlete opens on, mounted the way the page mounts it. */
-function openApp({ day, onLog = () => {} }: { day: Day | null; onLog?: (entry: Logged) => void }) {
+function openApp({
+  day,
+  onLog = () => {},
+  onNote = () => {},
+}: {
+  day: Day | null
+  onLog?: (entry: Logged) => void
+  onNote?: (entry: Noted) => void
+}) {
   const container = document.createElement('div')
 
   document.body.append(container)
@@ -152,17 +170,23 @@ function openApp({ day, onLog = () => {} }: { day: Day | null; onLog?: (entry: L
       week={WEEK}
       day={day}
       onLog={onLog}
+      onNote={onNote}
     />,
   )
 
   return page.elementLocator(container)
 }
 
-/** The screen, plus every Log it has sent — the tap is the save, so there is no button. */
+/** The screen, plus everything it has sent — the tap is the save, so there is no button. */
 function openTraining({ day }: { day: Day | null }) {
   const logged: Logged[] = []
+  const noted: Noted[] = []
 
-  return { screen: openApp({ day, onLog: (entry) => logged.push(entry) }), logged }
+  return {
+    screen: openApp({ day, onLog: (entry) => logged.push(entry), onNote: (entry) => noted.push(entry) }),
+    logged,
+    noted,
+  }
 }
 
 describe('the Day the athlete opens on', () => {
@@ -336,5 +360,64 @@ describe('logging what happened', () => {
     const { screen } = openTraining({ day: dayOf(4) })
 
     expect(screen.getByRole('button', { name: /Skipped/ }).all()).toHaveLength(0)
+  })
+})
+
+describe('the Day as a whole', () => {
+  test('a note belongs to the Day itself, alongside the Exercises rather than inside one', async () => {
+    const { screen, noted } = openTraining({ day: dayOf(1) })
+
+    await screen.getByRole('textbox', { name: 'Note on Day 1' }).fill('Swapped with day 4')
+    await screen.getByRole('button', { name: /Week notes/ }).click()
+
+    expect(noted).toEqual([{ dayOrdinal: 1, note: 'Swapped with day 4' }])
+  })
+
+  test('a rest Day takes a note too, so a walk needs no invented Exercise', async () => {
+    const { screen, noted } = openTraining({ day: dayOf(4) })
+
+    await screen.getByRole('textbox', { name: 'Note on Day 4' }).fill('walked')
+    await screen.getByRole('button', { name: /Week notes/ }).click()
+
+    expect(noted).toEqual([{ dayOrdinal: 4, note: 'walked' }])
+  })
+
+  test('a note already written is there when the Day opens', async () => {
+    const { screen } = openTraining({ day: dayOf(7) })
+
+    await expect.element(screen.getByRole('textbox', { name: 'Note on Day 7' })).toHaveValue('walked 5km instead')
+  })
+
+  test('how much of the Day is left is on the screen, and moves with every tap', async () => {
+    const { screen } = openTraining({ day: dayOf(1) })
+
+    await expect.element(screen.getByText('0 of 3 logged')).toBeVisible()
+
+    await screen.getByRole('button', { name: 'Good — Dips' }).click()
+
+    await expect.element(screen.getByText('1 of 3 logged')).toBeVisible()
+  })
+
+  test('the last Exercise logged finishes the Day — there is nothing to press', async () => {
+    const { screen } = openTraining({ day: dayOf(6) })
+
+    expect(screen.getByRole('button', { name: /Done/ }).all()).toHaveLength(0)
+
+    await screen.getByRole('button', { name: 'Good — Zone 2 run' }).click()
+
+    await expect.element(screen.getByText(/Day done/)).toBeVisible()
+  })
+
+  test('an Optional Exercise is not something the Day asks for, so it is not counted', async () => {
+    const { screen } = openTraining({ day: dayOf(7) })
+
+    await expect.element(screen.getByText(/Day done/)).toBeVisible()
+    expect(screen.getByText(/logged$/).all()).toHaveLength(0)
+  })
+
+  test('a rest Day whose date has passed reads as done', async () => {
+    const { screen } = openTraining({ day: dayOf(4) })
+
+    await expect.element(screen.getByText(/Day done/)).toBeVisible()
   })
 })

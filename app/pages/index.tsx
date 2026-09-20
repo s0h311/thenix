@@ -3,7 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { Mark } from '../components/Brand/Mark.tsx'
 import { WeekView } from '../components/Training/WeekView.tsx'
-import type { Logged } from '../components/Training/WeekView.tsx'
+import type { Logged, Noted } from '../components/Training/WeekView.tsx'
 import type { CurrentDay } from '../../shared/training.ts'
 
 export const Route = createFileRoute('/')({
@@ -35,10 +35,19 @@ async function openTraining(): Promise<Opened> {
 
 /** Sends one tap on its way. The screen has already moved on — this only persists it. */
 async function sendLog({ weekNumber, entry }: { weekNumber: number; entry: Logged }): Promise<void> {
-  const response = await fetch('/api/actions/logExercise', {
+  await send('/api/actions/logExercise', { weekNumber, today: today(), ...entry })
+}
+
+/** The same, for what belongs to the Day rather than to any Exercise on it. */
+async function sendNote({ weekNumber, entry }: { weekNumber: number; entry: Noted }): Promise<void> {
+  await send('/api/actions/logDay', { weekNumber, today: today(), ...entry })
+}
+
+async function send(action: string, body: object): Promise<void> {
+  const response = await fetch(action, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ weekNumber, ...entry }),
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) {
@@ -50,10 +59,9 @@ async function sendLog({ weekNumber, entry }: { weekNumber: number; entry: Logge
 function HomePage() {
   const queryClient = useQueryClient()
   const { data, isPending } = useQuery({ queryKey: ['currentDay', today()], queryFn: openTraining })
-  const { mutate } = useMutation({
-    mutationFn: sendLog,
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['currentDay'] }),
-  })
+  const settle = { onSettled: () => queryClient.invalidateQueries({ queryKey: ['currentDay'] }) }
+  const { mutate: log } = useMutation({ mutationFn: sendLog, ...settle })
+  const { mutate: note } = useMutation({ mutationFn: sendNote, ...settle })
 
   if (isPending) {
     return <p>Opening today’s training…</p>
@@ -91,7 +99,8 @@ function HomePage() {
     <WeekView
       week={data.current.week}
       day={data.current.day}
-      onLog={(entry) => mutate({ weekNumber, entry })}
+      onLog={(entry) => log({ weekNumber, entry })}
+      onNote={(entry) => note({ weekNumber, entry })}
     />
   )
 }
