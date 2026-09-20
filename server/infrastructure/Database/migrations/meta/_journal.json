@@ -8,6 +8,13 @@
       "when": 1789899257010,
       "tag": "0000_hard_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789905096803,
+      "tag": "0001_colossal_white_queen",
+      "breakpoints": true
     }
   ]
 }
