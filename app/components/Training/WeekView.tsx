@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { CopyButton } from './CopyButton.tsx'
+import { logFor, noTaps, noteOf, tally, tapOf, withTap } from '../../libs/Training/logging.ts'
 import { asDate, asLoad, asPrescribed, asRest } from '../../libs/Training/notation.ts'
+import type { Logged, Noted, Taps } from '../../libs/Training/logging.ts'
 import type { ChangeEvent, MouseEvent } from 'react'
 import type { Day, Difficulty, Exercise, Log, Orphan, Week } from '../../../shared/training.ts'
 
@@ -11,11 +13,7 @@ const RATINGS: { difficulty: Difficulty; label: string }[] = [
   { difficulty: 'challenging', label: 'Challenging' },
 ]
 
-/** One Log, named by where it belongs — logging acts on whichever Day is open. */
-export type Logged = { dayOrdinal: number; exerciseKey: string; log: Log }
-
-/** The Day's own note, which belongs to no Exercise on it. Empty takes it back. */
-export type Noted = { dayOrdinal: number; note: string }
+export type { Logged, Noted } from '../../libs/Training/logging.ts'
 
 /**
  * The screen the athlete trains from. It opens on today's Day and never navigates
@@ -37,15 +35,13 @@ export function WeekView({
   onExport: () => Promise<void>
 }) {
   const [openOrdinal, setOpenOrdinal] = useState<number | null>(day?.ordinal ?? null)
-  // What has been tapped since the screen opened. The tap is the save, so the screen
-  // answers from here rather than waiting for the Week to come back around.
-  const [logged, setLogged] = useState<Record<string, Log>>({})
+  const [taps, setTaps] = useState<Taps>(noTaps)
   const [noted, setNoted] = useState<Record<number, string>>({})
 
   const open = week.days.find((one) => one.ordinal === openOrdinal) ?? null
 
   function record(entry: Logged) {
-    setLogged((current) => ({ ...current, [`${entry.dayOrdinal}:${entry.exerciseKey}`]: entry.log }))
+    setTaps((current) => withTap(current, entry))
     onLog(entry)
   }
 
@@ -65,7 +61,7 @@ export function WeekView({
         <DayDetail
           day={open}
           today={day}
-          logged={logged}
+          taps={taps}
           note={noted[open.ordinal] ?? open.log}
           onLog={record}
           onNote={note}
@@ -88,14 +84,14 @@ export function WeekView({
 function DayDetail({
   day,
   today,
-  logged,
+  taps,
   note,
   onLog,
   onNote,
 }: {
   day: Day
   today: Day | null
-  logged: Record<string, Log>
+  taps: Taps
   note: string | null
   onLog: (entry: Logged) => void
   onNote: (entry: Noted) => void
@@ -110,7 +106,7 @@ function DayDetail({
         <h1 className='text-2xl font-semibold'>{day.focus ?? (day.kind === 'rest' ? 'Full Rest' : 'Training')}</h1>
         <Progress
           day={day}
-          logged={logged}
+          taps={taps}
         />
       </header>
 
@@ -125,7 +121,7 @@ function DayDetail({
               key={`${day.ordinal}:${exercise.key}`}
               exercise={exercise}
               dayOrdinal={day.ordinal}
-              log={logged[`${day.ordinal}:${exercise.key}`] ?? exercise.log}
+              log={logFor({ taps, dayOrdinal: day.ordinal, exercise })}
               onLog={onLog}
             />
           ))}
@@ -149,15 +145,10 @@ function DayDetail({
  * Day finishes when the last Exercise it asks for is logged, or — for a rest Day,
  * which asks for none — when its date has passed, which the server already derived.
  */
-function Progress({ day, logged }: { day: Day; logged: Record<string, Log> }) {
-  const asked = day.exercises.filter((one) => !one.optional)
-  const done = asked.filter((one) => (logged[`${day.ordinal}:${one.key}`] ?? one.log) !== null).length
-  // The tapped state is what counts while training, so the line moves with the tap
-  // rather than with the round trip. A rest Day has nothing to tap, so it keeps the
-  // completion it was read with.
-  const complete = day.kind === 'rest' ? day.complete : done === asked.length
+function Progress({ day, taps }: { day: Day; taps: Taps }) {
+  const { done, asked, complete } = tally({ taps, day })
 
-  if (!complete && asked.length === 0) {
+  if (!complete && asked === 0) {
     return null
   }
 
@@ -166,7 +157,7 @@ function Progress({ day, logged }: { day: Day; logged: Record<string, Log> }) {
       aria-live='polite'
       className='text-sm font-semibold'
     >
-      {complete ? <span>✓ Day done</span> : <span>{`${done} of ${asked.length} logged`}</span>}
+      {complete ? <span>✓ Day done</span> : <span>{`${done} of ${asked} logged`}</span>}
     </p>
   )
 }
@@ -328,18 +319,17 @@ function LogControls({
   const [note, setNote] = useState(log?.note ?? '')
 
   const chosen = log?.kind === 'difficulty' ? log.difficulty : null
-  const written = note.trim() === '' ? null : note
 
   function send(entry: Log) {
     onLog({ dayOrdinal, exerciseKey: exercise.key, log: entry })
   }
 
   function rate(event: MouseEvent<HTMLButtonElement>) {
-    send({ kind: 'difficulty', difficulty: event.currentTarget.value as Difficulty, note: written })
+    send(tapOf({ chip: event.currentTarget.value as Difficulty, note }))
   }
 
   function skip() {
-    send({ kind: 'skipped', note: written })
+    send(tapOf({ chip: 'skipped', note }))
   }
 
   function write(event: ChangeEvent<HTMLTextAreaElement>) {
@@ -348,20 +338,11 @@ function LogControls({
 
   /** The note is saved the moment it is left alone — it keeps whatever was tapped. */
   function keep() {
-    if (written === (log?.note ?? null)) {
-      return
+    const entry = noteOf({ log, note })
+
+    if (entry !== null) {
+      send(entry)
     }
-
-    if (log === null || log.kind === 'note') {
-      // A note with no rating is a Log in its own right — "walked", "back hurt".
-      if (written !== null) {
-        send({ kind: 'note', note: written })
-      }
-
-      return
-    }
-
-    send(log.kind === 'skipped' ? { kind: 'skipped', note: written } : { ...log, note: written })
   }
 
   return (
