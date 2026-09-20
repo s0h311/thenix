@@ -1,0 +1,306 @@
+{
+  "number": 15,
+  "notes": "Wk14 clean. Dips partial ROM painless + no pull flags → pull re-enters. Negatives in as ASSISTED PARTIALS, not full reps. No physio → the pain rule is the gate, not feel.\n\nPAIN RULE (all days): ≤3/10 during, baseline within 24h, no added AM stiffness. Fail → drop back one step.\n\nHARD STOP (any of these = stop pulling, get seen): clicking/catching/locking, pain at rest or at night, week-over-week worsening, numbness/tingling/weakness, a pop.\n\nSTILL OUT: full-bodyweight negatives / full pull-ups (wk17 earliest), archer / one-arm push-ups, HSPU.\n\nRest: 3 min main lifts, 60–90s accessories.",
+  "days": [
+    {
+      "ordinal": 1,
+      "kind": "training",
+      "focus": "Upper Push + Core",
+      "exercises": [
+        {
+          "key": "decline-push-ups",
+          "movementId": "push-up",
+          "name": "Decline push-ups",
+          "variant": "feet on chair",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 8, "max": 8 } },
+          "tempo": "3s down / 1s pause / 1s up",
+          "cue": "Pre-injury best was 8/8/7/6; beat it with the tempo intact.",
+          "raw": "Decline push-ups (feet on chair): 4×8, 3s down / 1s pause / 1s up — step 4, floor standard was clean."
+        },
+        {
+          "key": "chair-dips",
+          "movementId": "dip",
+          "name": "Chair dips",
+          "variant": "partial ROM (~90°)",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "cue": "Volume up, ROM holds. Range advances wk16, not the same week negatives enter.",
+          "raw": "Chair dips, PARTIAL ROM (~90°): 3×8 — volume up, ROM holds."
+        },
+        {
+          "key": "pike-push-ups",
+          "movementId": "pike-push-up",
+          "name": "Pike push-ups",
+          "variant": "hands elevated on chair",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 5, "max": 5 } },
+          "cue": "Not advancing three push levers at once; hands lower wk16.",
+          "raw": "Pike push-ups, hands elevated on chair: 3×5 — hold."
+        },
+        {
+          "key": "right-arm-curl",
+          "movementId": "biceps-curl",
+          "name": "Right-arm curl",
+          "side": "right",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "symmetric", "value": 7, "unit": "kg" },
+          "tempo": "3s up / 3s down",
+          "raw": "Right-arm curl: 3×8, 3s/3s, 7kg — +1kg."
+        },
+        {
+          "key": "left-arm-curl",
+          "movementId": "biceps-curl",
+          "name": "Left-arm curl",
+          "side": "left",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 6, "max": 6 } },
+          "load": { "kind": "symmetric", "value": 9, "unit": "kg" },
+          "tempo": "3s up / 3s down",
+          "raw": "Left-arm curl: 3×6, 9kg — hold."
+        },
+        {
+          "key": "tricep-extension",
+          "movementId": "tricep-extension",
+          "name": "Tricep extension",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "symmetric", "value": 7, "unit": "kg" },
+          "raw": "Tricep extension: right 3×8 @7kg — +1kg. Left 3×8 @7kg — reps up, it got easier."
+        },
+        {
+          "key": "hollow-body",
+          "movementId": "hollow-body-hold",
+          "name": "Hollow body",
+          "variant": "weighted, arms overhead",
+          "prescription": { "kind": "time", "sets": 3, "seconds": { "min": 30, "max": 30 } },
+          "load": { "kind": "perHand", "value": 1, "unit": "l", "approx": true, "implement": "bottles" },
+          "cue": "Full position already maxed, so load is the lever.",
+          "raw": "Hollow body, WEIGHTED: 3×30s, hold 0.5–1L bottles (or one 2–3kg plate) in the hands, arms overhead."
+        }
+      ]
+    },
+    {
+      "ordinal": 2,
+      "kind": "training",
+      "focus": "Zone 2",
+      "exercises": [
+        {
+          "key": "zone-2-run",
+          "movementId": "zone-2-run",
+          "name": "Zone 2 run",
+          "prescription": { "kind": "distance", "km": { "min": 9, "max": 9 }, "pace": "~6:00/km" },
+          "cue": "3:2 breathing. 6:00/km at 9 km held conversational → that's the pace. Hold both.",
+          "raw": "Day 2 (Fri) — Zone 2 | 9 km @ ~6:00/km, 3:2 breathing"
+        }
+      ]
+    },
+    {
+      "ordinal": 3,
+      "kind": "training",
+      "focus": "Lower Body",
+      "notes": "Explosive intent up, controlled down.",
+      "exercises": [
+        {
+          "key": "box-pistols",
+          "movementId": "box-pistol-squat",
+          "name": "Box pistols",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 5, "max": 5 } },
+          "load": { "kind": "bodyweight" },
+          "cue": "HOLD box height — lowered box was challenging wk14, consolidate before lowering again.",
+          "raw": "Box pistols: 4×5/side, bodyweight, HOLD box height."
+        },
+        {
+          "key": "bulgarian-split-squats",
+          "movementId": "bulgarian-split-squat",
+          "name": "Bulgarian split squats",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 6, "max": 6 } },
+          "load": { "kind": "symmetric", "value": 13, "unit": "kg", "implement": "backpack" },
+          "tempo": "3s down + 2s pause at bottom",
+          "cue": "Load holds, tempo is the lever this week.",
+          "raw": "Bulgarian split squats: 4×6/side, 13kg, 3s down + 2s pause at bottom."
+        },
+        {
+          "key": "kickstand-rdl",
+          "movementId": "kickstand-rdl",
+          "name": "Kickstand RDL",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "symmetric", "value": 5, "unit": "kg", "implement": "backpack" },
+          "tempo": "3s down",
+          "cue": "Rear toe light, ~90% front leg, flat back, stop before rounding. Any back pain → straight back to bodyweight.",
+          "raw": "Kickstand RDL: 3×8/side, 5kg, 3s down — first load since the back flag."
+        },
+        {
+          "key": "loaded-high-step-up",
+          "movementId": "high-step-up",
+          "name": "Loaded high step-up",
+          "variant": "~knee height",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "symmetric", "value": 13, "unit": "kg", "implement": "backpack" },
+          "tempo": "3s down",
+          "cue": "REPLACES single-leg hip thrust. Backpack loads fine standing.",
+          "raw": "Loaded high step-up (~knee height): 3×8/side, 13kg, 3s down — REPLACES single-leg hip thrust."
+        },
+        {
+          "key": "single-leg-calf-raise",
+          "movementId": "single-leg-calf-raise",
+          "name": "Single-leg calf raise",
+          "variant": "deficit",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "symmetric", "value": 15, "unit": "kg" },
+          "cue": "Full stretch off edge. No 15kg → 13kg + 2s stretch pause at the bottom.",
+          "raw": "Single-leg calf raise, deficit: 3×8/side, 15kg, full stretch off edge."
+        }
+      ]
+    },
+    {
+      "ordinal": 4,
+      "kind": "rest",
+      "focus": "Full Rest",
+      "notes": "Walk optional.",
+      "exercises": []
+    },
+    {
+      "ordinal": 5,
+      "kind": "training",
+      "focus": "Upper Pull + Core",
+      "notes": "Order matters: pull work while fresh, curls after.",
+      "exercises": [
+        {
+          "key": "scapular-pulls",
+          "movementId": "scapular-pull",
+          "name": "Scapular pulls",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "tempo": "2s hold at top",
+          "cue": "First, as warm-up.",
+          "raw": "Scapular pulls: 3×8, 2s hold at top — first, as warm-up."
+        },
+        {
+          "key": "assisted-partial-negatives",
+          "movementId": "pull-up-negative",
+          "name": "Assisted partial negatives",
+          "variant": "lower to elbow ~90° only, feet on box or band",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 3, "max": 3 } },
+          "tempo": "5s lower",
+          "cue": "First rep of each set: hold 3–5s at the top before lowering — this is the screen. Shaky or front-of-shoulder pain → stop.",
+          "raw": "Assisted partial negatives: 4×3 — from top, lower to elbow ~90° ONLY, 5s, then step off."
+        },
+        {
+          "key": "inverted-rows",
+          "movementId": "inverted-row",
+          "name": "Inverted rows",
+          "variant": "pronated, same angle",
+          "prescription": { "kind": "reps", "sets": 4, "reps": { "min": 8, "max": 8 } },
+          "tempo": "2s pause at chest",
+          "cue": "Negatives are this week's pull lever.",
+          "raw": "Inverted rows, pronated: 4×8, 2s pause at chest — same angle."
+        },
+        {
+          "key": "reverse-snow-angels",
+          "movementId": "reverse-snow-angel",
+          "name": "Reverse snow angels",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 12, "max": 12 } },
+          "load": { "kind": "perHand", "value": 0.5, "unit": "l", "implement": "bottles" },
+          "raw": "Reverse snow angels: 3×12, 0.5L bottles."
+        },
+        {
+          "key": "right-arm-curl",
+          "movementId": "biceps-curl",
+          "name": "Right-arm curl",
+          "side": "right",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "symmetric", "value": 7, "unit": "kg" },
+          "tempo": "3s up / 3s down",
+          "raw": "Right-arm curl: 3×8, 3s/3s, 7kg."
+        },
+        {
+          "key": "left-arm-curl",
+          "movementId": "biceps-curl",
+          "name": "Left-arm curl",
+          "side": "left",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 6, "max": 6 } },
+          "load": { "kind": "symmetric", "value": 9, "unit": "kg" },
+          "tempo": "3s up / 3s down",
+          "raw": "Left-arm curl: 3×6, 9kg."
+        },
+        {
+          "key": "tricep-extension",
+          "movementId": "tricep-extension",
+          "name": "Tricep extension",
+          "side": "each",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "load": { "kind": "symmetric", "value": 7, "unit": "kg" },
+          "raw": "Tricep extension: as Day 1."
+        },
+        {
+          "key": "hanging-knee-raises",
+          "movementId": "hanging-knee-raise",
+          "name": "Hanging knee raises",
+          "prescription": { "kind": "reps", "sets": 3, "reps": { "min": 8, "max": 8 } },
+          "cue": "Slow, no swing.",
+          "raw": "Hanging knee raises: 3×8, slow, no swing — replaces floor leg raises."
+        },
+        {
+          "key": "hollow-body",
+          "movementId": "hollow-body-hold",
+          "name": "Hollow body",
+          "variant": "weighted, arms overhead",
+          "prescription": { "kind": "time", "sets": 3, "seconds": { "min": 30, "max": 30 } },
+          "load": { "kind": "perHand", "value": 1, "unit": "l", "approx": true, "implement": "bottles" },
+          "raw": "Hollow body, weighted: 3×30s, same load as Day 1."
+        }
+      ]
+    },
+    {
+      "ordinal": 6,
+      "kind": "training",
+      "focus": "VO2max",
+      "notes": "Norwegian 4×4. Priority run. Target: 4:10/km, all four reps, within ~5s of each other. Rep 1 ceiling 4:15. Wk14 was 4:04 / 4:42 / 4:17 / 4:18 — the set does not move up on an uneven session, regardless of average.",
+      "exercises": [
+        {
+          "key": "warm-up",
+          "movementId": "run-warm-up",
+          "name": "Warm-up",
+          "prescription": { "kind": "time", "sets": 1, "seconds": { "min": 600, "max": 720 } },
+          "raw": "10–12 min warm-up, easy → moderate."
+        },
+        {
+          "key": "norwegian-4x4",
+          "movementId": "vo2max-intervals",
+          "name": "Norwegian 4×4",
+          "prescription": {
+            "kind": "rounds",
+            "rounds": 4,
+            "work": { "kind": "time", "sets": 1, "seconds": { "min": 240, "max": 240 } },
+            "recovery": { "kind": "time", "sets": 1, "seconds": { "min": 180, "max": 180 } }
+          },
+          "cue": "RPE 8, no full sentences, not a sprint. Rain cuts it → drop a rep, keep interval length.",
+          "raw": "4 rounds: 4 min @ 90–95% HRmax (RPE 8, no full sentences, not a sprint) / 3 min easy JOG."
+        },
+        {
+          "key": "cooldown",
+          "movementId": "run-cooldown",
+          "name": "Cooldown",
+          "prescription": { "kind": "time", "sets": 1, "seconds": { "min": 300, "max": 300 } },
+          "raw": "5 min cooldown. Work at intensity: 16 min."
+        }
+      ]
+    },
+    {
+      "ordinal": 7,
+      "kind": "training",
+      "focus": "Active Recovery",
+      "notes": "90/90 hip, cat-cow, wrist circles, shoulder dislocates — full range now if pain-free.",
+      "exercises": [
+        {
+          "key": "walk",
+          "movementId": "walk",
+          "name": "Walk",
+          "prescription": { "kind": "time", "sets": 1, "seconds": { "min": 1800, "max": 1800 } },
+          "raw": "Day 7 (Wed) — Active Recovery | 30 min walk + mobility"
+        }
+      ]
+    }
+  ]
+}

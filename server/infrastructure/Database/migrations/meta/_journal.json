@@ -15,6 +15,13 @@
       "when": 1789905096803,
       "tag": "0001_colossal_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789905510862,
+      "tag": "0002_fantastic_ben_grimm",
+      "breakpoints": true
     }
   ]
 }
