@@ -35,6 +35,7 @@ export function WeekView({
   onNote,
   unsaved,
   onRetry,
+  onDismiss,
   onExport,
 }: {
   week: Week
@@ -44,6 +45,8 @@ export function WeekView({
   /** What is still on the phone, in words, or null while the server has it all. */
   unsaved: Alert | null
   onRetry: () => void
+  /** Lets go of the Saves the server will not take, which nothing else can clear. */
+  onDismiss: () => void
   /** Puts this Week, Logs and all, where the coach can be handed it. */
   onExport: () => Promise<void>
 }) {
@@ -101,6 +104,7 @@ export function WeekView({
       <Unsaved
         unsaved={unsaved}
         onRetry={onRetry}
+        onDismiss={onDismiss}
       />
     </div>
   )
@@ -119,8 +123,20 @@ export function WeekView({
  *
  * In the warning tokens, never the brand: the fault this replaces was an amber
  * block that read as the one thing on the screen to press.
+ *
+ * The one button is whatever the alert says it is. A Save the server will not take
+ * is not an errand — sending it again only spends the tap — so there the button lets
+ * it go, and the bar can be cleared rather than pinned here for the session.
  */
-function Unsaved({ unsaved, onRetry }: { unsaved: Alert | null; onRetry: () => void }) {
+function Unsaved({
+  unsaved,
+  onRetry,
+  onDismiss,
+}: {
+  unsaved: Alert | null
+  onRetry: () => void
+  onDismiss: () => void
+}) {
   if (unsaved === null) {
     return null
   }
@@ -142,7 +158,7 @@ function Unsaved({ unsaved, onRetry }: { unsaved: Alert | null; onRetry: () => v
           <p className='text-label font-semibold text-warning-ink'>{unsaved.said}</p>
           <Button
             tone='destructive'
-            onClick={onRetry}
+            onClick={unsaved.does === 'retry' ? onRetry : onDismiss}
           >
             {unsaved.action}
           </Button>
