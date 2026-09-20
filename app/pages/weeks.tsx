@@ -3,7 +3,8 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { Shelf } from '../components/Training/Shelf.tsx'
 import { TrainingWeek } from '../components/Training/TrainingWeek.tsx'
 import { today } from '../libs/Training/clock.ts'
-import type { Week, WeekOnShelf } from '../../shared/training.ts'
+import { openShelf, shelfKey } from '../libs/Training/shelf.ts'
+import type { Week } from '../../shared/training.ts'
 
 /** Which Week is open lives in the URL, so a Week looked up is a Week that can be gone back to. */
 type Shelved = { number?: number }
@@ -16,20 +17,6 @@ export const Route = createFileRoute('/weeks')({
   },
   component: ShelfPage,
 })
-
-async function openShelf(): Promise<WeekOnShelf[] | null> {
-  const response = await fetch(`/api/actions/listWeeks?today=${today()}`)
-
-  if (response.status === 401) {
-    return null
-  }
-
-  if (!response.ok) {
-    throw new Error('the Weeks could not be read')
-  }
-
-  return (await response.json()) as WeekOnShelf[]
-}
 
 async function openWeek(number: number): Promise<Week | null> {
   const response = await fetch(`/api/actions/getWeek?number=${number}&today=${today()}`)
@@ -49,7 +36,7 @@ function ShelfPage() {
   const { number } = Route.useSearch()
   const navigate = Route.useNavigate()
 
-  const shelf = useQuery({ queryKey: ['shelf', today()], queryFn: openShelf })
+  const shelf = useQuery({ queryKey: shelfKey(), queryFn: openShelf })
   const week = useQuery({
     queryKey: ['week', number, today()],
     queryFn: () => openWeek(number ?? 0),

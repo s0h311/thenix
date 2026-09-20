@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './pages/__root'
 import { Route as IndexRouteImport } from './pages/index'
 import { Route as AccountRouteImport } from './pages/account'
-import { Route as ImportRouteImport } from './pages/import'
+import { Route as CoachRouteImport } from './pages/coach'
 import { Route as SignInRouteImport } from './pages/sign-in'
 import { Route as WeeksRouteImport } from './pages/weeks'
 
@@ -25,9 +25,9 @@ const AccountRoute = AccountRouteImport.update({
   path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ImportRoute = ImportRouteImport.update({
-  id: '/import',
-  path: '/import',
+const CoachRoute = CoachRouteImport.update({
+  id: '/coach',
+  path: '/coach',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignInRoute = SignInRouteImport.update({
@@ -44,14 +44,14 @@ const WeeksRoute = WeeksRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
-  '/import': typeof ImportRoute
+  '/coach': typeof CoachRoute
   '/sign-in': typeof SignInRoute
   '/weeks': typeof WeeksRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
-  '/import': typeof ImportRoute
+  '/coach': typeof CoachRoute
   '/sign-in': typeof SignInRoute
   '/weeks': typeof WeeksRoute
 }
@@ -59,22 +59,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
-  '/import': typeof ImportRoute
+  '/coach': typeof CoachRoute
   '/sign-in': typeof SignInRoute
   '/weeks': typeof WeeksRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/account' | '/import' | '/sign-in' | '/weeks'
+  fullPaths: '/' | '/account' | '/coach' | '/sign-in' | '/weeks'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/account' | '/import' | '/sign-in' | '/weeks'
-  id: '__root__' | '/' | '/account' | '/import' | '/sign-in' | '/weeks'
+  to: '/' | '/account' | '/coach' | '/sign-in' | '/weeks'
+  id: '__root__' | '/' | '/account' | '/coach' | '/sign-in' | '/weeks'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
-  ImportRoute: typeof ImportRoute
+  CoachRoute: typeof CoachRoute
   SignInRoute: typeof SignInRoute
   WeeksRoute: typeof WeeksRoute
 }
@@ -95,11 +95,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/import': {
-      id: '/import'
-      path: '/import'
-      fullPath: '/import'
-      preLoaderRoute: typeof ImportRouteImport
+    '/coach': {
+      id: '/coach'
+      path: '/coach'
+      fullPath: '/coach'
+      preLoaderRoute: typeof CoachRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sign-in': {
@@ -122,7 +122,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
-  ImportRoute: ImportRoute,
+  CoachRoute: CoachRoute,
   SignInRoute: SignInRoute,
   WeeksRoute: WeeksRoute,
 }

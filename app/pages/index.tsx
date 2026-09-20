@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { Mark } from '../components/Brand/Mark.tsx'
+import { buttonClasses } from '../components/UI/Button.tsx'
 import { TrainingWeek } from '../components/Training/TrainingWeek.tsx'
 import { today } from '../libs/Training/clock.ts'
 import type { CurrentDay } from '../../shared/training.ts'
@@ -51,8 +52,8 @@ function HomePage() {
     return (
       <Nothing message='No Week covers today. Import the Week your coach wrote.'>
         <Link
-          to='/import'
-          className='inline-block rounded-md bg-legacy px-3 py-2 font-semibold text-white'
+          to='/coach'
+          className={buttonClasses('primary')}
         >
           Import a Week
         </Link>

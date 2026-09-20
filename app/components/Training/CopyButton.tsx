@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '../UI/Button.tsx'
 
 /**
  * Handing something to the coach, which is always the same act: one tap, nothing
@@ -31,18 +32,17 @@ export function CopyButton({
 
   return (
     <section className='space-y-2'>
-      <button
-        type='button'
+      <Button
         onClick={hand}
         disabled={handed === 'copying'}
-        className='w-full rounded-md border border-legacy px-3 py-2 font-semibold text-legacy disabled:opacity-60'
+        className='w-full'
       >
         {label}
-      </button>
+      </Button>
       {handed === 'untouched' || handed === 'copying' ? null : (
         <p
           aria-live='polite'
-          className='text-sm font-semibold'
+          className={`text-label font-semibold ${handed === 'copied' ? 'text-ink-muted' : 'text-warning'}`}
         >
           {handed === 'copied' ? copied : failed}
         </p>

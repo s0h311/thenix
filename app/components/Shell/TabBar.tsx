@@ -4,14 +4,13 @@ import { Logo } from '../Brand/Logo.tsx'
 import { authClient } from '../../libs/Auth/authClient.ts'
 
 /**
- * Where the athlete can go. Coach still points at the Import route; reorganising
- * that route into a Coach screen is #28 — this gives it a home to be reached from.
+ * Where the athlete can go.
  *
  * Account sits behind the last position: a destination, but not one of the three
  * the ritual is made of.
  */
 type Destination = Readonly<{
-  to: '/' | '/weeks' | '/import' | '/account'
+  to: '/' | '/weeks' | '/coach' | '/account'
   label: string
   icon: ReactNode
 }>
@@ -19,7 +18,7 @@ type Destination = Readonly<{
 const DESTINATIONS: readonly Destination[] = [
   { to: '/', label: 'Today', icon: <TodayIcon /> },
   { to: '/weeks', label: 'Weeks', icon: <WeeksIcon /> },
-  { to: '/import', label: 'Coach', icon: <CoachIcon /> },
+  { to: '/coach', label: 'Coach', icon: <CoachIcon /> },
   { to: '/account', label: 'Account', icon: <AccountIcon /> },
 ]
 
