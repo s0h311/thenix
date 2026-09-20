@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { SignedOut, Unreachable } from '../components/Shell/Nothing.tsx'
 import { Shelf } from '../components/Training/Shelf.tsx'
 import { TrainingWeek } from '../components/Training/TrainingWeek.tsx'
 import { buttonClasses } from '../components/UI/Button.tsx'
 import { today } from '../libs/Training/clock.ts'
 import { openShelf, shelfKey } from '../libs/Training/shelf.ts'
+import { standingOf } from '../libs/Training/standing.ts'
 import type { Week } from '../../shared/training.ts'
 
 /** Which Week is open lives in the URL, so a Week looked up is a Week that can be gone back to. */
@@ -38,70 +40,90 @@ function ShelfPage() {
   const navigate = Route.useNavigate()
 
   const shelf = useQuery({ queryKey: shelfKey(), queryFn: openShelf })
-  const week = useQuery({
-    queryKey: ['week', number, today()],
-    queryFn: () => openWeek(number ?? 0),
-    enabled: number !== undefined,
-  })
 
   // Whether the athlete is signed in is answered once, by the shelf, so an opened
   // Week never reports "there is no Week 12" when what is missing is the session.
-  if (shelf.isPending) {
-    return <p>Opening your Weeks…</p>
+  const standing = standingOf({ pending: shelf.isPending, got: shelf.data })
+
+  if (standing.at === 'opening') {
+    return <p className='text-ink-muted'>Opening your Weeks…</p>
   }
 
-  if (shelf.data === null || shelf.data === undefined) {
+  if (standing.at === 'signedOut') {
     return (
-      <div className='space-y-6'>
-        <h1 className='text-2xl font-semibold'>Weeks</h1>
-        <p>Sign in to see your Weeks.</p>
-        <Link
-          to='/sign-in'
-          className={buttonClasses('primary')}
-        >
-          Sign in
-        </Link>
-      </div>
+      <SignedOut
+        heading='Weeks'
+        said='Sign in to see your Weeks.'
+      />
+    )
+  }
+
+  if (standing.at === 'unreachable') {
+    return (
+      <Unreachable
+        heading='Weeks'
+        said='Your Weeks could not be read. You are still signed in — this one is the connection.'
+        onRetry={() => void shelf.refetch()}
+      />
     )
   }
 
   if (number !== undefined) {
-    if (week.isPending) {
-      return <p>Opening Week {number}…</p>
-    }
+    return <OpenedWeek number={number} />
+  }
 
-    const opened = week.data ?? null
+  return (
+    <div className='space-y-6'>
+      <h1 className='text-display'>Weeks</h1>
+      <Shelf
+        weeks={standing.it}
+        onOpen={(opened) => navigate({ search: { number: opened } })}
+      />
+    </div>
+  )
+}
 
+/**
+ * One Week off the shelf, trained from exactly as today's is. The session was
+ * settled by the shelf above, so the three things left to tell apart here are the
+ * wait, a Week the athlete does not have, and a Week that could not be read.
+ */
+function OpenedWeek({ number }: { number: number }) {
+  const week = useQuery({ queryKey: ['week', number, today()], queryFn: () => openWeek(number) })
+
+  if (week.isPending) {
+    return <p className='text-ink-muted'>Opening Week {number}…</p>
+  }
+
+  if (week.isError) {
     return (
-      <div className='space-y-6'>
-        <Link
-          to='/weeks'
-          className={buttonClasses('ghost', '-ml-4 self-start')}
-        >
-          ← All Weeks
-        </Link>
-        {opened === null ? (
-          <p>There is no Week {number}.</p>
-        ) : (
-          <TrainingWeek
-            week={opened}
-            // The Week being trained opens on today; a Week off the shelf holds no
-            // today, and opens on its first Day — its plan and its Logs, no tap first.
-            day={opened.days.find((day) => day.date === today()) ?? null}
-            refresh='week'
-          />
-        )}
-      </div>
+      <Unreachable
+        heading={`Week ${number}`}
+        said={`Week ${number} could not be read. You are still signed in — this one is the connection.`}
+        onRetry={() => void week.refetch()}
+      />
     )
   }
 
   return (
     <div className='space-y-6'>
-      <h1 className='text-2xl font-semibold'>Weeks</h1>
-      <Shelf
-        weeks={shelf.data}
-        onOpen={(opened) => navigate({ search: { number: opened } })}
-      />
+      <Link
+        to='/weeks'
+        className={buttonClasses('ghost', '-ml-4 self-start')}
+      >
+        ← All Weeks
+      </Link>
+      {week.data === null ? (
+        <p className='text-ink-muted'>There is no Week {number}.</p>
+      ) : (
+        <TrainingWeek
+          week={week.data}
+          // The Week being trained opens on today; a Week off the shelf holds no
+          // today, and opens on its first Day — its plan and its Logs, no tap first.
+          day={week.data.days.find((day) => day.date === today()) ?? null}
+          refresh='week'
+        />
+      )}
     </div>
   )
 }

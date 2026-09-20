@@ -1,59 +1,75 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
-import { Mark } from '../components/Brand/Mark.tsx'
-import { buttonClasses } from '../components/UI/Button.tsx'
+import { Nothing, SignedOut, Unreachable } from '../components/Shell/Nothing.tsx'
 import { TrainingWeek } from '../components/Training/TrainingWeek.tsx'
+import { buttonClasses } from '../components/UI/Button.tsx'
 import { today } from '../libs/Training/clock.ts'
+import { standingOf } from '../libs/Training/standing.ts'
 import type { CurrentDay } from '../../shared/training.ts'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
 })
 
-type Opened = { signedIn: false } | { signedIn: true; current: CurrentDay | null }
+/**
+ * What the server had for the athlete. Null is "not signed in" and nothing else is,
+ * so that "no Week covers today" — an answer, and a Shelf away from being fixed —
+ * cannot be mistaken for having no session.
+ */
+type Opened = { current: CurrentDay | null }
 
-async function openTraining(): Promise<Opened> {
+async function openTraining(): Promise<Opened | null> {
   const response = await fetch(`/api/actions/getCurrentDay?today=${today()}`)
 
   if (response.status === 401) {
-    return { signedIn: false }
+    return null
   }
 
   if (!response.ok) {
     throw new Error('today’s Day could not be read')
   }
 
-  return { signedIn: true, current: (await response.json()) as CurrentDay | null }
+  return { current: (await response.json()) as CurrentDay | null }
 }
 
 /** The app opens on today's training. Everything else is a fallback for not having any. */
 function HomePage() {
-  const { data, isPending } = useQuery({ queryKey: ['currentDay', today()], queryFn: openTraining })
+  const opened = useQuery({ queryKey: ['currentDay', today()], queryFn: openTraining })
+  const standing = standingOf({ pending: opened.isPending, got: opened.data })
 
-  if (isPending) {
-    return <p>Opening today’s training…</p>
+  if (standing.at === 'opening') {
+    return <p className='text-ink-muted'>Opening today’s training…</p>
   }
 
-  if (data === undefined || !data.signedIn) {
+  if (standing.at === 'signedOut') {
     return (
-      <Nothing message='Sign in to see today’s training.'>
-        <Link
-          to='/sign-in'
-          className='inline-block rounded-md bg-legacy px-3 py-2 font-semibold text-white'
-        >
-          Sign in
-        </Link>
-      </Nothing>
+      <SignedOut
+        heading='Training log'
+        said='Sign in to see today’s training.'
+      />
     )
   }
 
-  if (data.current === null) {
+  // Not a sign-out, and said as much: the session is intact and the signal is not.
+  if (standing.at === 'unreachable') {
     return (
-      <Nothing message='No Week covers today. Import the Week your coach wrote.'>
+      <Unreachable
+        heading='Training log'
+        said='Today’s training could not be read. You are still signed in — this one is the connection.'
+        onRetry={() => void opened.refetch()}
+      />
+    )
+  }
+
+  if (standing.it.current === null) {
+    return (
+      <Nothing
+        heading='Training log'
+        said='No Week covers today. Import the Week your coach wrote.'
+      >
         <Link
           to='/coach'
-          className={buttonClasses('primary')}
+          className={buttonClasses('primary', 'w-full')}
         >
           Import a Week
         </Link>
@@ -63,22 +79,9 @@ function HomePage() {
 
   return (
     <TrainingWeek
-      week={data.current.week}
-      day={data.current.day}
+      week={standing.it.current.week}
+      day={standing.it.current.day}
       refresh='currentDay'
     />
-  )
-}
-
-function Nothing({ message, children }: { message: string; children: ReactNode }) {
-  return (
-    <div className='space-y-6'>
-      <div className='flex items-center gap-3'>
-        <Mark />
-        <h1 className='text-2xl font-semibold'>Training log</h1>
-      </div>
-      <p>{message}</p>
-      {children}
-    </div>
   )
 }

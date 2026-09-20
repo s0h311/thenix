@@ -44,11 +44,6 @@
   --color-warning-ink: var(--color-rose-900);
   --color-warning-line: var(--color-rose-200);
 
-  /* The screens this redesign has not reached yet are still authored against
-   * the old two-colour theme. These go as each screen is rebuilt. */
-  --color-legacy: var(--color-amber-900);
-  --color-legacy-surface: var(--color-amber-200);
-
   /* The athlete's own phone, so nothing shifts or falls back when the gym has
    * no signal. */
   --font-sans:
@@ -108,9 +103,6 @@
     --color-warning-soft: var(--color-rose-950);
     --color-warning-ink: var(--color-rose-100);
     --color-warning-line: var(--color-rose-900);
-
-    --color-legacy: var(--color-amber-200);
-    --color-legacy-surface: var(--color-amber-900);
   }
 }
 
