@@ -97,7 +97,9 @@ A Log the phone has taken and the server has not. The tap is the save and the sc
 moves on the instant it happens, so the one thing it must never do is go on showing a
 set as recorded when nothing reached the server — a basement gym has no signal and the
 Week goes to the coach short. It is named on screen instead, and sending everything
-held is one tap. It lives only as long as the screen does.
+held is one tap. It belongs to the phone rather than to any one Week — it is still
+named after another Week is opened, and each held Log carries the Week it was recorded
+against, so sending it later writes it home. It lives only as long as the screen does.
 _Avoid_: Pending, failed, offline
 
 **Orphan**:

@@ -1,7 +1,13 @@
 import type { Logged, Noted } from './logging.ts'
 
-/** One thing the athlete recorded, on its way to the server. */
-export type Save = { kind: 'log'; entry: Logged } | { kind: 'note'; entry: Noted }
+/**
+ * One thing the athlete recorded, on its way to the server, carrying the Week it was
+ * recorded against. The Week travels with the Save rather than being read off the
+ * screen when it is sent: a Save held in a basement gym outlives the Week on screen,
+ * and the athlete who opens another one before the signal comes back would otherwise
+ * have it written against whichever Week they happened to be looking at.
+ */
+export type Save = { weekNumber: number } & ({ kind: 'log'; entry: Logged } | { kind: 'note'; entry: Noted })
 
 /** What the phone has taken and the server has not: keyed by what each Save records. */
 export type Outbox = Readonly<Record<string, Save>>
@@ -55,6 +61,6 @@ export function unsavedAlert(outbox: Outbox): Alert | null {
 
 function targetOf(save: Save): string {
   return save.kind === 'log'
-    ? `log:${save.entry.dayOrdinal}:${save.entry.exerciseKey}`
-    : `note:${save.entry.dayOrdinal}`
+    ? `log:${save.weekNumber}:${save.entry.dayOrdinal}:${save.entry.exerciseKey}`
+    : `note:${save.weekNumber}:${save.entry.dayOrdinal}`
 }

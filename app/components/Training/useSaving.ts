@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { sendSave } from '../../libs/Training/log.ts'
 import { held, landed, nothingUnsaved, unsaved, unsavedAlert } from '../../libs/Training/saving.ts'
 import type { Logged, Noted } from '../../libs/Training/logging.ts'
-import type { Save } from '../../libs/Training/saving.ts'
 
 /**
  * Logging, and what becomes of a Log the server never gets. The tap is the save and
@@ -16,7 +15,7 @@ export function useSaving({ weekNumber, refresh }: { weekNumber: number; refresh
   const [outbox, setOutbox] = useState(nothingUnsaved)
 
   const { mutate } = useMutation({
-    mutationFn: (save: Save) => sendSave({ weekNumber, save }),
+    mutationFn: sendSave,
     onError: (_failure, save) => setOutbox((current) => held(current, save)),
     onSuccess: (_landed, save) => setOutbox((current) => landed(current, save)),
     // The Week is read back either way: a Save that failed leaves the screen showing
@@ -25,8 +24,8 @@ export function useSaving({ weekNumber, refresh }: { weekNumber: number; refresh
   })
 
   return {
-    record: (entry: Logged) => mutate({ kind: 'log', entry }),
-    note: (entry: Noted) => mutate({ kind: 'note', entry }),
+    record: (entry: Logged) => mutate({ weekNumber, kind: 'log', entry }),
+    note: (entry: Noted) => mutate({ weekNumber, kind: 'note', entry }),
     unsaved: unsavedAlert(outbox),
     /** Everything still held, sent again — one tap for a whole session's worth. */
     retry: () => unsaved(outbox).forEach((save) => mutate(save)),

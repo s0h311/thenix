@@ -3,15 +3,16 @@ import { held, landed, nothingUnsaved, unsaved, unsavedAlert } from './saving.ts
 import type { Save } from './saving.ts'
 import type { Difficulty } from '../../../shared/training.ts'
 
-function tap({ dayOrdinal = 1, exerciseKey = 'dips', difficulty = 'good' as Difficulty } = {}): Save {
+function tap({ weekNumber = 12, dayOrdinal = 1, exerciseKey = 'dips', difficulty = 'good' as Difficulty } = {}): Save {
   return {
+    weekNumber,
     kind: 'log',
     entry: { dayOrdinal, exerciseKey, log: { kind: 'difficulty', difficulty, note: null } },
   }
 }
 
-function dayNote({ dayOrdinal = 1, note = 'walked' } = {}): Save {
-  return { kind: 'note', entry: { dayOrdinal, note } }
+function dayNote({ weekNumber = 12, dayOrdinal = 1, note = 'walked' } = {}): Save {
+  return { weekNumber, kind: 'note', entry: { dayOrdinal, note } }
 }
 
 describe('a Log that did not reach the server', () => {
@@ -35,6 +36,18 @@ describe('what is held, and what is a separate thing to hold', () => {
     const both = held(held(nothingUnsaved, tap()), tap({ dayOrdinal: 4 }))
 
     expect(unsaved(both)).toEqual([tap(), tap({ dayOrdinal: 4 })])
+  })
+
+  test('the Week it was recorded against is part of what it records, so Day 1 of two Weeks is twice', () => {
+    const both = held(held(nothingUnsaved, tap()), tap({ weekNumber: 13 }))
+
+    expect(unsaved(both)).toEqual([tap(), tap({ weekNumber: 13 })])
+  })
+
+  test('a Log landing on this Week settles nothing held against another', () => {
+    const settled = landed(held(nothingUnsaved, tap()), tap({ weekNumber: 13 }))
+
+    expect(unsaved(settled)).toEqual([tap()])
   })
 
   test("the Day's own note is not the Log of any Exercise on it", () => {
