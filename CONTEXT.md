@@ -93,6 +93,14 @@ _Avoid_: Progress
 **Import**:
 Taking a coach-authored Week JSON into the app. The app validates; it never parses prose.
 
+**Preview**:
+The parse shown before anything is written: the Week as the app read it, never the
+text that was pasted. Confirming is a second step, so a Week that read differently
+from what the athlete expected is caught while the shelf is still untouched. It is
+also where the start date is picked — the day after the last Week ended, or the next
+Monday when there is none, because the coach writes no weekday at all.
+_Avoid_: Draft, dry run, staging
+
 **Export**:
 Emitting a Week with its Logs as JSON, for the coach to read when writing the next Week.
 Three things are exported, each a paste into the coach's chat: a Week, the **schema**,

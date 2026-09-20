@@ -1,13 +1,22 @@
-export type { CurrentDay, Day, Difficulty, Exercise, Log, Orphan, Week, WeekOnShelf } from '../../../shared/training.ts'
+export type {
+  CurrentDay,
+  Day,
+  Difficulty,
+  Exercise,
+  ImportFault,
+  Log,
+  Orphan,
+  Week,
+  WeekOnShelf,
+  WeekPreview,
+} from '../../../shared/training.ts'
 
-import type { Week } from '../../../shared/training.ts'
+import type { ImportFault, Week, WeekPreview } from '../../../shared/training.ts'
 
-/** A fault in the coach's Week, named where the coach can find it. */
-export type ImportError = {
-  day: number | null
-  exercise: string | null
-  field: string
-  message: string
-}
+/** The faults of a rejected paste, under the name the Training feature calls them by. */
+export type ImportError = ImportFault
 
 export type ImportResult = { ok: true; week: Week } | { ok: false; errors: ImportError[] }
+
+/** The parse, shown before the shelf changes, with the date the Week would start on. */
+export type PreviewResult = { ok: true; preview: WeekPreview; startDate: string } | { ok: false; errors: ImportError[] }

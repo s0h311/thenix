@@ -103,6 +103,34 @@ export type Week = {
 }
 
 /**
+ * A fault in the coach's Week, named where the coach can find it: the Day, the
+ * Exercise and the field. `day` is null for a fault outside any Day, `exercise` for
+ * one outside any Exercise — the Week itself, or a paste that was not JSON at all.
+ */
+export type ImportFault = {
+  day: number | null
+  exercise: string | null
+  field: string
+  message: string
+}
+
+/**
+ * A Week as it parsed, before anything is written. It carries no dates: where a Day
+ * falls in the calendar follows from a start date that has not been picked yet, and
+ * showing the parse rather than the paste is what catches a Week that read wrong.
+ */
+export type WeekPreview = {
+  number: number
+  notes: string | null
+  days: {
+    ordinal: number
+    kind: Day['kind']
+    focus: string | null
+    exercises: { key: string; name: string; raw: string }[]
+  }[]
+}
+
+/**
  * A Week as the shelf shows it: enough to pick one out of twenty and open it, and
  * deliberately not its plan. The number is the coach's own, taken from the JSON.
  */

@@ -1,12 +1,24 @@
 import { and, asc, eq, inArray, max, notExists, notInArray } from 'drizzle-orm'
 import { day, dayLog, exercise, log, movement, week } from '../../infrastructure/Database/schemas/public.ts'
-import { dateOfDay } from './dayDate.ts'
+import { dateOfDay, startAfter } from './dayDate.ts'
 import { forCoach } from './forCoach.ts'
 import { parseWeek } from './parseWeek.ts'
 import { schemaForCoach } from './weekSchema.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
 import type { PlannedWeek } from './forCoach.ts'
-import type { CurrentDay, Day, Difficulty, Exercise, ImportResult, Log, Orphan, Week, WeekOnShelf } from './types.ts'
+import type {
+  CurrentDay,
+  Day,
+  Difficulty,
+  Exercise,
+  ImportResult,
+  Log,
+  Orphan,
+  PreviewResult,
+  Week,
+  WeekOnShelf,
+  WeekPreview,
+} from './types.ts'
 import type { ImportedWeek } from './weekSchema.ts'
 
 type Dependencies = {
@@ -275,6 +287,35 @@ export function createTraining({ database }: Dependencies) {
       return { ok: true, week: written }
     },
 
+    /**
+     * The paste read back as a Week, with nothing written. Confirming is a second
+     * step on purpose: an import that parsed differently from what the athlete
+     * expected is caught before the shelf changes rather than after.
+     */
+    async previewWeek({
+      userId,
+      json,
+      today,
+    }: {
+      userId: string
+      json: string
+      today: string
+    }): Promise<PreviewResult> {
+      const parsed = parseWeek(json)
+
+      if (!parsed.ok) {
+        return { ok: false, errors: parsed.errors }
+      }
+
+      const ends = (await weekSpans({ userId })).flatMap((span) => (span.endDate === null ? [] : [span.endDate]))
+
+      return {
+        ok: true,
+        preview: asPreview(parsed.week),
+        startDate: startAfter({ previousEnd: ends.toSorted().at(-1) ?? null, today }),
+      }
+    },
+
     getWeek: readWeek,
 
     /**
@@ -507,5 +548,19 @@ function columnsOf(entry: Log): { skipped: boolean; difficulty: string | null; n
     skipped: entry.kind === 'skipped',
     difficulty: entry.kind === 'difficulty' ? entry.difficulty : null,
     note: entry.note ?? null,
+  }
+}
+
+/** The parse as the athlete reads it back: ordinals, Focus, and the coach's own lines. */
+function asPreview(imported: ImportedWeek): WeekPreview {
+  return {
+    number: imported.number,
+    notes: imported.notes ?? null,
+    days: imported.days.map((one) => ({
+      ordinal: one.ordinal,
+      kind: one.kind,
+      focus: one.focus ?? null,
+      exercises: one.exercises.map((each) => ({ key: each.key, name: each.name, raw: each.raw })),
+    })),
   }
 }

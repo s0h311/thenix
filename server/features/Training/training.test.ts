@@ -653,6 +653,86 @@ describe('a Week the coach got wrong', () => {
   })
 })
 
+describe('previewing the Week before it is saved', () => {
+  test('a Week that has only been previewed is not on the shelf', async () => {
+    const { training, athlete } = await openApp()
+
+    await training.previewWeek({ userId: athlete, json: coachJson(20), today: AFTERWARDS })
+
+    expect(await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS })).toBeNull()
+  })
+
+  test('the preview shows what parsed — the Days, their kind and their Focus', async () => {
+    const { training, athlete } = await openApp()
+
+    const result = await training.previewWeek({ userId: athlete, json: coachJson(9), today: AFTERWARDS })
+
+    expect(result.ok ? result.preview.number : null).toBe(9)
+    expect(result.ok ? result.preview.days.map((day) => [day.ordinal, day.kind, day.focus]) : []).toEqual([
+      [5, 'training', 'Upper Pull + Core'],
+      [6, 'rest', null],
+      [7, 'training', 'Lower (strength)'],
+    ])
+  })
+
+  test('the preview names the Exercises that parsed, with the coach’s own line', async () => {
+    const { training, athlete } = await openApp()
+
+    const result = await training.previewWeek({ userId: athlete, json: coachJson(9), today: AFTERWARDS })
+    const firstDay = result.ok ? result.preview.days[0] : null
+
+    expect(firstDay?.exercises[0]).toEqual({
+      key: 'scapular-pulls',
+      name: expect.any(String),
+      raw: expect.any(String),
+    })
+  })
+
+  test('a Week the coach got wrong previews as the errors, not as a Week', async () => {
+    const { training, athlete } = await openApp()
+
+    const result = await training.previewWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days[2].exercises[3].load.value = 'ten kilos'
+      }),
+    })
+
+    expect(result.ok ? [] : result.errors).toEqual([
+      { day: 3, exercise: 'kickstand-rdl', field: 'load.value', message: expect.any(String) },
+    ])
+  })
+})
+
+describe('the date a pasted Week would start on', () => {
+  test('it is the day after the last Week on the shelf ended', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const result = await training.previewWeek({ userId: athlete, json: coachJson(12), today: AFTERWARDS })
+
+    expect(result.ok ? result.startDate : null).toBe('2025-09-01')
+  })
+
+  test('with nothing on the shelf it is the next Monday, because the coach wrote no weekday', async () => {
+    const { training, athlete } = await openApp()
+
+    const result = await training.previewWeek({ userId: athlete, json: coachJson(12), today: '2025-09-30' })
+
+    expect(result.ok ? result.startDate : null).toBe('2025-10-06')
+  })
+
+  test('on a Monday with nothing on the shelf, that Monday is today', async () => {
+    const { training, athlete } = await openApp()
+
+    const result = await training.previewWeek({ userId: athlete, json: coachJson(12), today: '2025-10-06' })
+
+    expect(result.ok ? result.startDate : null).toBe('2025-10-06')
+  })
+})
+
 describe('the start date the user picks at import', () => {
   test('a Week that starts on a Thursday puts its Day 1 on that Thursday', async () => {
     const { training, athlete } = await openApp()

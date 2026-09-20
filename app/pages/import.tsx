@@ -2,7 +2,10 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { CopyButton } from '../components/Training/CopyButton.tsx'
+import { Faults } from '../components/Training/Faults.tsx'
+import { Preview } from '../components/Training/Preview.tsx'
 import { copyRegistry, copySchema } from '../libs/Training/export.ts'
+import type { ImportFault, WeekPreview } from '../../shared/training.ts'
 
 export const Route = createFileRoute('/import')({
   component: ImportPage,
@@ -24,77 +27,106 @@ type ImportedWeek = {
   }[]
 }
 
-type ImportFault = {
-  day: number | null
-  exercise: string | null
-  field: string
-  message: string
-}
-
+type PreviewResult = { ok: true; preview: WeekPreview; startDate: string } | { ok: false; errors: ImportFault[] }
 type ImportResult = { ok: true; week: ImportedWeek } | { ok: false; errors: ImportFault[] }
+
+/**
+ * Where the athlete is in the import. Confirming is a second step on purpose: the
+ * paste is read back as a Week first, and nothing is written until that Week is the
+ * one the athlete expected.
+ */
+type Stage =
+  | { at: 'pasting' }
+  | { at: 'previewing'; preview: WeekPreview; startDate: string }
+  | { at: 'rejected'; faults: ImportFault[] }
+  | { at: 'imported'; week: ImportedWeek }
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+async function post(url: string, body: unknown): Promise<unknown> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  return await response.json()
+}
+
 function ImportPage() {
   const [json, setJson] = useState('')
-  const [startDate, setStartDate] = useState(today())
-  const [importing, setImporting] = useState(false)
-  const [result, setResult] = useState<ImportResult | null>(null)
+  const [working, setWorking] = useState(false)
+  const [stage, setStage] = useState<Stage>({ at: 'pasting' })
 
-  async function importWeek(event: FormEvent) {
+  async function preview(event: FormEvent) {
     event.preventDefault()
-    setImporting(true)
+    setWorking(true)
 
-    const response = await fetch('/api/actions/importWeek', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ json, startDate, today: today() }),
-    })
+    const result = (await post('/api/actions/previewWeek', { json, today: today() })) as PreviewResult
 
-    setResult((await response.json()) as ImportResult)
-    setImporting(false)
+    setStage(
+      result.ok
+        ? { at: 'previewing', preview: result.preview, startDate: result.startDate }
+        : { at: 'rejected', faults: result.errors },
+    )
+    setWorking(false)
+  }
+
+  async function confirm(startDate: string) {
+    setWorking(true)
+
+    const result = (await post('/api/actions/importWeek', { json, startDate, today: today() })) as ImportResult
+
+    setStage(result.ok ? { at: 'imported', week: result.week } : { at: 'rejected', faults: result.errors })
+    setWorking(false)
   }
 
   return (
     <div className='space-y-6'>
       <h1 className='text-2xl font-semibold'>Import a Week</h1>
-      <form
-        onSubmit={importWeek}
-        className='space-y-4'
-      >
-        <p>Paste the Week your coach wrote, then pick the day it starts.</p>
-        <textarea
-          required
-          rows={12}
-          placeholder='{ "number": 21, "days": [ … ] }'
-          aria-label='The coach’s Week, as JSON'
-          value={json}
-          onChange={(event) => setJson(event.target.value)}
-          className='w-full rounded-md bg-brand-surface px-3 py-2 font-mono text-sm text-brand placeholder:text-brand/60'
-        />
-        <label className='flex items-center gap-3 font-semibold'>
-          Starts on
-          <input
-            type='date'
-            required
-            value={startDate}
-            onChange={(event) => setStartDate(event.target.value)}
-            className='rounded-md bg-brand-surface px-3 py-2 font-normal text-brand'
-          />
-        </label>
-        <button
-          type='submit'
-          disabled={importing}
-          className='w-full rounded-md bg-brand px-3 py-2 font-semibold text-white disabled:opacity-60'
-        >
-          {importing ? 'Importing…' : 'Import'}
-        </button>
-      </form>
 
-      {result?.ok === false && <Faults errors={result.errors} />}
-      {result?.ok === true && <WeekReadBack week={result.week} />}
+      {stage.at === 'pasting' || stage.at === 'imported' ? (
+        <form
+          onSubmit={preview}
+          className='space-y-4'
+        >
+          <p>Paste the Week your coach wrote. You will see what it says before anything is saved.</p>
+          <textarea
+            required
+            rows={12}
+            placeholder='{ "number": 21, "days": [ … ] }'
+            aria-label='The coach’s Week, as JSON'
+            value={json}
+            onChange={(event) => setJson(event.target.value)}
+            className='w-full rounded-md bg-brand-surface px-3 py-2 font-mono text-sm text-brand placeholder:text-brand/60'
+          />
+          <button
+            type='submit'
+            disabled={working}
+            className='w-full rounded-md bg-brand px-3 py-2 font-semibold text-white disabled:opacity-60'
+          >
+            {working ? 'Reading…' : 'Read it back'}
+          </button>
+        </form>
+      ) : null}
+
+      {stage.at === 'previewing' && (
+        <Preview
+          preview={stage.preview}
+          startDate={stage.startDate}
+          onConfirm={confirm}
+          onBack={() => setStage({ at: 'pasting' })}
+        />
+      )}
+      {stage.at === 'rejected' && (
+        <Faults
+          faults={stage.faults}
+          onBack={() => setStage({ at: 'pasting' })}
+        />
+      )}
+      {stage.at === 'imported' && <WeekReadBack week={stage.week} />}
 
       <ForTheCoach />
     </div>
@@ -126,25 +158,6 @@ function ForTheCoach() {
         failed='The Movement list could not be copied. Try again.'
         onCopy={() => copyRegistry()}
       />
-    </section>
-  )
-}
-
-function Faults({ errors }: { errors: ImportFault[] }) {
-  return (
-    <section className='space-y-2'>
-      <h2 className='text-xl font-semibold'>Nothing was imported</h2>
-      <p>Hand these back to your coach and ask for a corrected Week.</p>
-      <ul className='space-y-1 font-mono text-sm'>
-        {errors.map((fault) => (
-          <li key={`${fault.day}-${fault.exercise}-${fault.field}`}>
-            {[fault.day === null ? 'week' : `day ${fault.day}`, fault.exercise, fault.field]
-              .filter(Boolean)
-              .join(' · ')}
-            {`: ${fault.message}`}
-          </li>
-        ))}
-      </ul>
     </section>
   )
 }
