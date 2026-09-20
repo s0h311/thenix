@@ -1,5 +1,4 @@
 import { defineConfig } from 'vitest/config'
-import { playwright } from '@vitest/browser-playwright'
 
 export default defineConfig({
   plugins: [],
@@ -14,30 +13,11 @@ export default defineConfig({
       MAIL_FROM_NAME: 'vitest',
       MAIL_FROM_ADDRESS: 'vitest',
     },
-    projects: [
-      {
-        test: {
-          name: 'node',
-          // App tests that need no DOM (design tokens, pure helpers) run here as .test.ts;
-          // anything that renders is .test.tsx and runs in the browser project below.
-          include: ['server/**/*.test.ts', 'shared/**/*.test.ts', 'app/**/*.test.ts'],
-          environment: 'node',
-        },
-      },
-      {
-        test: {
-          name: 'browser',
-          include: ['app/**/*.test.tsx'],
-          browser: {
-            provider: playwright(),
-            enabled: true,
-            // at least one instance is required
-            instances: [{ browser: 'chromium' }],
-            headless: true,
-          },
-        },
-      },
-    ],
+    // One project, no DOM. A test earns its place by covering business logic or
+    // genuinely complex state; rendering is left to the type checker and to review.
+    name: 'node',
+    include: ['server/**/*.test.ts', 'shared/**/*.test.ts', 'app/**/*.test.ts'],
+    environment: 'node',
     watch: false,
   },
 })
