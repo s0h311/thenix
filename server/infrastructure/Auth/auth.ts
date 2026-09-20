@@ -11,7 +11,6 @@ const FEATURE = 'libs/Auth auth'
 
 export const auth = betterAuth({
   emailAndPassword: {
-    disableSignUp: true,
     enabled: true,
     autoSignIn: true,
     requireEmailVerification: false,

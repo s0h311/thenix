@@ -8,6 +8,11 @@ export default defineConfig({
     env: {
       ENVIRONMENT: 'vitest',
       SERVER_HOST: 'vitest',
+      MAIL_SMTP_HOST: 'vitest',
+      MAIL_SMTP_USER: 'vitest',
+      MAIL_SMTP_PASSWORD: 'vitest',
+      MAIL_FROM_NAME: 'vitest',
+      MAIL_FROM_ADDRESS: 'vitest',
     },
     projects: [
       {
@@ -23,7 +28,7 @@ export default defineConfig({
             provider: playwright(),
             enabled: true,
             // at least one instance is required
-            // instances: [{ browser: 'chromium' }],
+            instances: [{ browser: 'chromium' }],
             headless: true,
           },
         },
