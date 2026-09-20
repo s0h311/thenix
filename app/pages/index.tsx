@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { Mark } from '../components/Brand/Mark.tsx'
 import { WeekView } from '../components/Training/WeekView.tsx'
+import type { Logged } from '../components/Training/WeekView.tsx'
 import type { CurrentDay } from '../../shared/training.ts'
 
 export const Route = createFileRoute('/')({
@@ -32,9 +33,27 @@ async function openTraining(): Promise<Opened> {
   return { signedIn: true, current: (await response.json()) as CurrentDay | null }
 }
 
+/** Sends one tap on its way. The screen has already moved on — this only persists it. */
+async function sendLog({ weekNumber, entry }: { weekNumber: number; entry: Logged }): Promise<void> {
+  const response = await fetch('/api/actions/logExercise', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ weekNumber, ...entry }),
+  })
+
+  if (!response.ok) {
+    throw new Error('the Log could not be saved')
+  }
+}
+
 /** The app opens on today's training. Everything else is a fallback for not having any. */
 function HomePage() {
+  const queryClient = useQueryClient()
   const { data, isPending } = useQuery({ queryKey: ['currentDay', today()], queryFn: openTraining })
+  const { mutate } = useMutation({
+    mutationFn: sendLog,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['currentDay'] }),
+  })
 
   if (isPending) {
     return <p>Opening today’s training…</p>
@@ -66,10 +85,13 @@ function HomePage() {
     )
   }
 
+  const weekNumber = data.current.week.number
+
   return (
     <WeekView
       week={data.current.week}
       day={data.current.day}
+      onLog={(entry) => mutate({ weekNumber, entry })}
     />
   )
 }

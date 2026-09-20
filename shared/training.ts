@@ -34,6 +34,17 @@ export type Prescription =
 
 export type Side = 'both' | 'each' | 'left' | 'right'
 
+export type Difficulty = 'easy' | 'good' | 'challenging'
+
+/**
+ * What the athlete records against one Exercise. Exactly three shapes, and none of
+ * them holds a number (ADR 0003): a skip, a rating, or prose standing on its own.
+ */
+export type Log =
+  | { kind: 'skipped'; note: string | null }
+  | { kind: 'difficulty'; difficulty: Difficulty; note: string | null }
+  | { kind: 'note'; note: string }
+
 export type Exercise = {
   key: string
   movementId: string
@@ -49,6 +60,8 @@ export type Exercise = {
   cue: string | null
   /** The coach's line verbatim, always present — what is shown when parsing was partial. */
   raw: string
+  /** What happened. Null is unlogged, which a skip is deliberately not. */
+  log: Log | null
 }
 
 export type Day = {

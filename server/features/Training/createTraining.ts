@@ -1,14 +1,16 @@
 import { and, asc, eq, inArray, max } from 'drizzle-orm'
-import { day, exercise, movement, week } from '../../infrastructure/Database/schemas/public.ts'
+import { day, exercise, log, movement, week } from '../../infrastructure/Database/schemas/public.ts'
 import { dateOfDay } from './dayDate.ts'
 import { parseWeek } from './parseWeek.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
-import type { CurrentDay, Day, Exercise, ImportResult, Week } from './types.ts'
+import type { CurrentDay, Day, Difficulty, Exercise, ImportResult, Log, Week } from './types.ts'
 import type { ImportedWeek } from './weekSchema.ts'
 
 type Dependencies = {
   database: Database
 }
+
+type ExerciseRow = { exercise: typeof exercise.$inferSelect; log: typeof log.$inferSelect | null }
 
 /**
  * The Training feature. Everything the coach's JSON turns into — the schema, the
@@ -27,12 +29,15 @@ export function createTraining({ database }: Dependencies) {
 
     const dayRows = await database.select().from(day).where(eq(day.weekId, weekRow.id)).orderBy(asc(day.ordinal))
 
+    // The Log rides along with the Exercise it belongs to: the screen that asks for
+    // a Day always wants to know what already happened on it.
     const exerciseRows =
       dayRows.length === 0
         ? []
         : await database
-            .select()
+            .select({ exercise, log })
             .from(exercise)
+            .leftJoin(log, eq(log.exerciseId, exercise.id))
             .where(
               inArray(
                 exercise.dayId,
@@ -51,7 +56,7 @@ export function createTraining({ database }: Dependencies) {
         kind: dayRow.kind as Day['kind'],
         focus: dayRow.focus,
         notes: dayRow.notes,
-        exercises: exerciseRows.filter((row) => row.dayId === dayRow.id).map(toExercise),
+        exercises: exerciseRows.filter((row) => row.exercise.dayId === dayRow.id).map(toExercise),
       })),
     }
   }
@@ -192,6 +197,54 @@ export function createTraining({ database }: Dependencies) {
 
     getWeek: readWeek,
 
+    /**
+     * Records what happened against one Exercise, replacing whatever was there — a
+     * mistap costs one more tap, never an undo. Null when the athlete has no such
+     * Exercise, which is the only way this can fail.
+     */
+    async logExercise({
+      userId,
+      weekNumber,
+      dayOrdinal,
+      exerciseKey,
+      log: entry,
+    }: {
+      userId: string
+      weekNumber: number
+      dayOrdinal: number
+      exerciseKey: string
+      log: Log
+    }): Promise<Day | null> {
+      const [found] = await database
+        .select({ id: exercise.id })
+        .from(exercise)
+        .innerJoin(day, eq(day.id, exercise.dayId))
+        .innerJoin(week, eq(week.id, day.weekId))
+        .where(
+          and(
+            eq(week.userId, userId),
+            eq(week.number, weekNumber),
+            eq(day.ordinal, dayOrdinal),
+            eq(exercise.key, exerciseKey),
+          ),
+        )
+
+      if (found === undefined) {
+        return null
+      }
+
+      const columns = columnsOf(entry)
+
+      await database
+        .insert(log)
+        .values({ exerciseId: found.id, ...columns })
+        .onConflictDoUpdate({ target: log.exerciseId, set: { ...columns, loggedAt: new Date() } })
+
+      const written = await readWeek({ userId, number: weekNumber })
+
+      return written?.days.find((one) => one.ordinal === dayOrdinal) ?? null
+    },
+
     /** What the app opens on: today's Day, and the Week it sits in. */
     async getCurrentDay({ userId, today }: { userId: string; today: string }): Promise<CurrentDay | null> {
       const number = await currentWeek({ userId, today })
@@ -211,7 +264,7 @@ export function createTraining({ database }: Dependencies) {
   }
 }
 
-function toExercise(row: typeof exercise.$inferSelect): Exercise {
+function toExercise({ exercise: row, log: logRow }: ExerciseRow): Exercise {
   return {
     key: row.key,
     movementId: row.movementId,
@@ -226,5 +279,32 @@ function toExercise(row: typeof exercise.$inferSelect): Exercise {
     restSeconds: row.restSeconds as Exercise['restSeconds'],
     cue: row.cue,
     raw: row.raw,
+    log: toLog(logRow),
+  }
+}
+
+/** The three shapes of ADR 0003, read back out of the flat columns they are stored in. */
+function toLog(row: typeof log.$inferSelect | null): Log | null {
+  if (row === null) {
+    return null
+  }
+
+  if (row.skipped) {
+    return { kind: 'skipped', note: row.note }
+  }
+
+  if (row.difficulty !== null) {
+    return { kind: 'difficulty', difficulty: row.difficulty as Difficulty, note: row.note }
+  }
+
+  return { kind: 'note', note: row.note ?? '' }
+}
+
+/** And the same three shapes flattened back down for storage. */
+function columnsOf(entry: Log): { skipped: boolean; difficulty: string | null; note: string | null } {
+  return {
+    skipped: entry.kind === 'skipped',
+    difficulty: entry.kind === 'difficulty' ? entry.difficulty : null,
+    note: entry.note ?? null,
   }
 }

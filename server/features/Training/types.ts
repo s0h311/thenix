@@ -1,4 +1,4 @@
-export type { CurrentDay, Day, Exercise, Week } from '../../../shared/training.ts'
+export type { CurrentDay, Day, Difficulty, Exercise, Log, Week } from '../../../shared/training.ts'
 
 import type { Week } from '../../../shared/training.ts'
 

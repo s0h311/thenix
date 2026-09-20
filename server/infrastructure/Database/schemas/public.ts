@@ -76,3 +76,23 @@ export const exercise = pgTable(
     index('exercise_side_idx').on(table.side),
   ],
 )
+
+/**
+ * What the athlete did, one row per Exercise — writing again replaces, so a mistap
+ * costs one more tap. The three shapes of ADR 0003 are stored flat: `skipped`, a
+ * `difficulty`, or a note standing alone. No column here counts anything.
+ */
+export const log = pgTable(
+  'log',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    exerciseId: uuid('exercise_id')
+      .notNull()
+      .references(() => exercise.id, { onDelete: 'cascade' }),
+    skipped: boolean('skipped').notNull().default(false),
+    difficulty: text('difficulty'),
+    note: text('note'),
+    loggedAt: timestamp('logged_at').defaultNow().notNull(),
+  },
+  (table) => [unique('log_exercise_unique').on(table.exerciseId)],
+)

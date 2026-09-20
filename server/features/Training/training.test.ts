@@ -502,3 +502,183 @@ describe('opening the app on a training day', () => {
     expect(await training.getCurrentDay({ userId: other, today: '2025-08-27' })).toBeNull()
   })
 })
+
+describe('logging what happened', () => {
+  test('one tap on a rating is the whole Log, and the Day reads it back', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'good', note: null },
+    })
+
+    const week = await training.getWeek({ userId: athlete, number: 20 })
+
+    expect(exerciseIn(week, { ordinal: 1, key: 'dips' }).log).toEqual({
+      kind: 'difficulty',
+      difficulty: 'good',
+      note: null,
+    })
+  })
+
+  test('a mistap is corrected by logging again, which replaces rather than adds', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'easy', note: null },
+    })
+    await training.logExercise({
+      userId: athlete,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'challenging', note: null },
+    })
+
+    const week = await training.getWeek({ userId: athlete, number: 20 })
+
+    expect(exerciseIn(week, { ordinal: 1, key: 'dips' }).log).toEqual({
+      kind: 'difficulty',
+      difficulty: 'challenging',
+      note: null,
+    })
+  })
+
+  test('a skip is recorded as a skip, which an unlogged Exercise is not', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'skipped', note: null },
+    })
+
+    const week = await training.getWeek({ userId: athlete, number: 20 })
+
+    expect(exerciseIn(week, { ordinal: 1, key: 'dips' }).log).toEqual({ kind: 'skipped', note: null })
+    expect(exerciseIn(week, { ordinal: 1, key: 'pike-push-ups' }).log).toBeNull()
+  })
+
+  test('a note rides along with a rating', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'challenging', note: 'challenging, but did 4x8' },
+    })
+
+    const week = await training.getWeek({ userId: athlete, number: 20 })
+
+    expect(exerciseIn(week, { ordinal: 1, key: 'dips' }).log).toEqual({
+      kind: 'difficulty',
+      difficulty: 'challenging',
+      note: 'challenging, but did 4x8',
+    })
+  })
+
+  test('a note stands on its own when no rating fits', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'note', note: 'back hurt' },
+    })
+
+    const week = await training.getWeek({ userId: athlete, number: 20 })
+
+    expect(exerciseIn(week, { ordinal: 1, key: 'dips' }).log).toEqual({ kind: 'note', note: 'back hurt' })
+  })
+
+  test('the left and right arm keep their own Logs, as they keep their own loads', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      weekNumber: 20,
+      dayOrdinal: 3,
+      exerciseKey: 'box-pistols-left',
+      log: { kind: 'difficulty', difficulty: 'challenging', note: null },
+    })
+    await training.logExercise({
+      userId: athlete,
+      weekNumber: 20,
+      dayOrdinal: 3,
+      exerciseKey: 'box-pistols-right',
+      log: { kind: 'difficulty', difficulty: 'good', note: null },
+    })
+
+    const week = await training.getWeek({ userId: athlete, number: 20 })
+
+    expect(exerciseIn(week, { ordinal: 3, key: 'box-pistols-left' }).log).toEqual({
+      kind: 'difficulty',
+      difficulty: 'challenging',
+      note: null,
+    })
+    expect(exerciseIn(week, { ordinal: 3, key: 'box-pistols-right' }).log).toEqual({
+      kind: 'difficulty',
+      difficulty: 'good',
+      note: null,
+    })
+  })
+
+  test('a Day other than today is logged the same way, for the session trained without a phone', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const day = await training.logExercise({
+      userId: athlete,
+      weekNumber: 20,
+      dayOrdinal: 3,
+      exerciseKey: 'box-pistols-left',
+      log: { kind: 'skipped', note: 'no weights' },
+    })
+
+    expect(day?.ordinal).toBe(3)
+    expect(day?.exercises.find((one) => one.key === 'box-pistols-left')?.log).toEqual({
+      kind: 'skipped',
+      note: 'no weights',
+    })
+  })
+
+  test('an athlete cannot log against another athlete’s Exercise', async () => {
+    const { training, athlete, database } = await openApp()
+    const other = await signUp({ database, email: 'other@example.com' })
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const day = await training.logExercise({
+      userId: other,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'good', note: null },
+    })
+
+    expect(day).toBeNull()
+    expect(
+      exerciseIn(await training.getWeek({ userId: athlete, number: 20 }), { ordinal: 1, key: 'dips' }).log,
+    ).toBeNull()
+  })
+})

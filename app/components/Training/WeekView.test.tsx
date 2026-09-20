@@ -2,6 +2,7 @@ import { expect, describe, test } from 'vitest'
 import { page } from 'vitest/browser'
 import { createRoot } from 'react-dom/client'
 import { WeekView } from './WeekView.tsx'
+import type { Logged } from './WeekView.tsx'
 import type { Day, Week } from '../../../shared/training.ts'
 
 const WEEK: Week = {
@@ -31,6 +32,7 @@ const WEEK: Week = {
           restSeconds: null,
           cue: 'Deepened, 2 clean partial weeks banked.',
           raw: 'Dips, ROM ~120°: 3×6, slow — deepened, 2 clean partial weeks banked.',
+          log: null,
         },
         {
           key: 'hollow-body',
@@ -46,6 +48,7 @@ const WEEK: Week = {
           restSeconds: { min: 60, max: 60 },
           cue: null,
           raw: 'Hollow body, weighted: 3×35s, 1kg/hand, rest 60s.',
+          log: null,
         },
         {
           key: 'biceps-curls',
@@ -61,6 +64,7 @@ const WEEK: Week = {
           restSeconds: { min: 35, max: 35 },
           cue: null,
           raw: 'biceps curls, effective sets, 12kg (14kg if hitting 15+ reps), 3 sets, 35 sec rest',
+          log: null,
         },
       ],
     },
@@ -95,6 +99,7 @@ const WEEK: Week = {
           restSeconds: null,
           cue: '3:2 breathing.',
           raw: '10–11 km @ 6:00–6:10/km, 3:2 breathing',
+          log: null,
         },
       ],
     },
@@ -120,6 +125,7 @@ const WEEK: Week = {
           restSeconds: null,
           cue: null,
           raw: '(Optional) Dead hang: 2×45s, passive',
+          log: { kind: 'difficulty', difficulty: 'challenging', note: 'shoulders tired' },
         },
       ],
     },
@@ -137,7 +143,7 @@ function dayOf(ordinal: number): Day {
 }
 
 /** The screen the athlete opens on, mounted the way the page mounts it. */
-function openApp({ day }: { day: Day | null }) {
+function openApp({ day, onLog = () => {} }: { day: Day | null; onLog?: (entry: Logged) => void }) {
   const container = document.createElement('div')
 
   document.body.append(container)
@@ -145,10 +151,18 @@ function openApp({ day }: { day: Day | null }) {
     <WeekView
       week={WEEK}
       day={day}
+      onLog={onLog}
     />,
   )
 
   return page.elementLocator(container)
+}
+
+/** The screen, plus every Log it has sent — the tap is the save, so there is no button. */
+function openTraining({ day }: { day: Day | null }) {
+  const logged: Logged[] = []
+
+  return { screen: openApp({ day, onLog: (entry) => logged.push(entry) }), logged }
 }
 
 describe('the Day the athlete opens on', () => {
@@ -223,5 +237,104 @@ describe('the Day the athlete opens on', () => {
 
     await expect.element(screen.getByText(/Nothing is scheduled for today/)).toBeVisible()
     await expect.element(screen.getByRole('button', { name: /Day 1/ })).toBeVisible()
+  })
+})
+
+describe('logging what happened', () => {
+  test('one tap on a rating is the whole Log', async () => {
+    const { screen, logged } = openTraining({ day: dayOf(1) })
+
+    await screen.getByRole('button', { name: 'Good — Dips' }).click()
+
+    expect(logged).toEqual([
+      { dayOrdinal: 1, exerciseKey: 'dips', log: { kind: 'difficulty', difficulty: 'good', note: null } },
+    ])
+  })
+
+  test('the tapped rating is the one shown as chosen, and the others are not', async () => {
+    const { screen } = openTraining({ day: dayOf(1) })
+
+    await screen.getByRole('button', { name: 'Challenging — Dips' }).click()
+
+    await expect
+      .element(screen.getByRole('button', { name: 'Challenging — Dips' }))
+      .toHaveAttribute('aria-pressed', 'true')
+    await expect.element(screen.getByRole('button', { name: 'Good — Dips' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('a mistap is corrected by tapping the rating that was meant', async () => {
+    const { screen, logged } = openTraining({ day: dayOf(1) })
+
+    await screen.getByRole('button', { name: 'Easy — Dips' }).click()
+    await screen.getByRole('button', { name: 'Challenging — Dips' }).click()
+
+    await expect.element(screen.getByRole('button', { name: 'Easy — Dips' })).toHaveAttribute('aria-pressed', 'false')
+    expect(logged.at(-1)?.log).toEqual({ kind: 'difficulty', difficulty: 'challenging', note: null })
+  })
+
+  test('a skip is its own tap, and reads as a skip rather than as nothing', async () => {
+    const { screen, logged } = openTraining({ day: dayOf(1) })
+
+    await screen.getByRole('button', { name: 'Skipped — Dips' }).click()
+
+    await expect.element(screen.getByRole('button', { name: 'Skipped — Dips' })).toHaveAttribute('aria-pressed', 'true')
+    expect(logged).toEqual([{ dayOrdinal: 1, exerciseKey: 'dips', log: { kind: 'skipped', note: null } }])
+  })
+
+  test('a chosen rating is marked by more than its colour', async () => {
+    const { screen } = openTraining({ day: dayOf(1) })
+
+    await screen.getByRole('button', { name: 'Good — Dips' }).click()
+
+    await expect.element(screen.getByRole('button', { name: 'Good — Dips' })).toHaveTextContent('✓')
+  })
+
+  test('a note written with no rating is a Log in its own right', async () => {
+    const { screen, logged } = openTraining({ day: dayOf(1) })
+
+    await screen.getByRole('textbox', { name: 'Note on Dips' }).fill('back hurt')
+    await screen.getByRole('button', { name: /Week notes/ }).click()
+
+    expect(logged).toEqual([{ dayOrdinal: 1, exerciseKey: 'dips', log: { kind: 'note', note: 'back hurt' } }])
+  })
+
+  test('a note written after a rating keeps the rating', async () => {
+    const { screen, logged } = openTraining({ day: dayOf(1) })
+
+    await screen.getByRole('button', { name: 'Challenging — Dips' }).click()
+    await screen.getByRole('textbox', { name: 'Note on Dips' }).fill('challenging, but did 4x8')
+    await screen.getByRole('button', { name: /Week notes/ }).click()
+
+    expect(logged.at(-1)?.log).toEqual({
+      kind: 'difficulty',
+      difficulty: 'challenging',
+      note: 'challenging, but did 4x8',
+    })
+  })
+
+  test('a Log already recorded is shown when the Day opens, rating and note both', async () => {
+    const { screen } = openTraining({ day: dayOf(7) })
+
+    await expect
+      .element(screen.getByRole('button', { name: 'Challenging — Dead hang' }))
+      .toHaveAttribute('aria-pressed', 'true')
+    await expect.element(screen.getByRole('textbox', { name: 'Note on Dead hang' })).toHaveValue('shoulders tired')
+  })
+
+  test('a Day other than the one being trained is logged through the Day strip', async () => {
+    const { screen, logged } = openTraining({ day: dayOf(1) })
+
+    await screen.getByRole('button', { name: /Day 6/ }).click()
+    await screen.getByRole('button', { name: 'Good — Zone 2 run' }).click()
+
+    expect(logged).toEqual([
+      { dayOrdinal: 6, exerciseKey: 'zone-2-run', log: { kind: 'difficulty', difficulty: 'good', note: null } },
+    ])
+  })
+
+  test('a rest Day asks for nothing, so there is nothing to log', async () => {
+    const { screen } = openTraining({ day: dayOf(4) })
+
+    expect(screen.getByRole('button', { name: /Skipped/ }).all()).toHaveLength(0)
   })
 })
