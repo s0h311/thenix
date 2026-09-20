@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: .
+    environment:
+      DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING}
+      ENVIRONMENT: ${ENVIRONMENT}
+      SERVER_HOST: ${SERVER_HOST}
+      VITE_BASE_URL: ${VITE_BASE_URL}
+    depends_on:
+      postgres:
+        condition: service_started
+    networks:
+      - thenix-network
+  postgres:
+    image: postgres:18-alpine3.23
+    restart: on-failure
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - thenix_postgres:/var/lib/postgresql
+    networks:
+      - thenix-network
+
+volumes:
+  thenix_postgres:
+networks:
+  thenix-network:
