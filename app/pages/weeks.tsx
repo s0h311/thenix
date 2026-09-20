@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Shelf } from '../components/Training/Shelf.tsx'
 import { TrainingWeek } from '../components/Training/TrainingWeek.tsx'
+import { buttonClasses } from '../components/UI/Button.tsx'
 import { today } from '../libs/Training/clock.ts'
 import { openShelf, shelfKey } from '../libs/Training/shelf.ts'
 import type { Week } from '../../shared/training.ts'
@@ -56,7 +57,7 @@ function ShelfPage() {
         <p>Sign in to see your Weeks.</p>
         <Link
           to='/sign-in'
-          className='inline-block rounded-md bg-legacy px-3 py-2 font-semibold text-white'
+          className={buttonClasses('primary')}
         >
           Sign in
         </Link>
@@ -75,7 +76,7 @@ function ShelfPage() {
       <div className='space-y-6'>
         <Link
           to='/weeks'
-          className='font-semibold text-legacy'
+          className={buttonClasses('ghost', '-ml-4 self-start')}
         >
           ← All Weeks
         </Link>

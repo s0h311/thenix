@@ -4,7 +4,7 @@ import { createTestDatabase } from '../../infrastructure/Database/testDatabase.t
 import { user } from '../../infrastructure/Database/schemas/auth.ts'
 import { createTraining } from './createTraining.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
-import type { Day, Exercise, Week } from './types.ts'
+import type { Day, DayOnShelf, Exercise, Week } from './types.ts'
 
 /* oxlint-disable typescript/no-explicit-any -- the coach is an LLM: a broken Week can hold anything anywhere. */
 
@@ -124,6 +124,24 @@ async function logEvery({
       log: { kind: 'difficulty', difficulty: 'good', note: null },
     })
   }
+}
+
+/** One Day as the shelf marks it, on the day the shelf is read. */
+async function shelvedDay({
+  training,
+  athlete,
+  number,
+  ordinal,
+  today,
+}: Pick<App, 'training' | 'athlete'> & { number: number; ordinal: number; today: string }): Promise<DayOnShelf> {
+  const shelf = await training.listWeeks({ userId: athlete, today })
+  const found = shelf.find((one) => one.number === number)?.days.find((one) => one.ordinal === ordinal)
+
+  if (found === undefined) {
+    throw new Error(`no day ${ordinal} of week ${number} on the shelf`)
+  }
+
+  return found
 }
 
 describe('importing a Week', () => {
@@ -1628,8 +1646,144 @@ describe('the shelf', () => {
 
     await importedWeek({ training, athlete, number: 9, startDate: '2025-06-05' })
 
-    expect(await training.listWeeks({ userId: athlete, today: AFTERWARDS })).toEqual([
+    expect(await training.listWeeks({ userId: athlete, today: AFTERWARDS })).toMatchObject([
       { number: 9, startDate: '2025-06-05', endDate: '2025-06-11', current: false },
+    ])
+  })
+
+  test('a Week on the shelf carries its Days, each with how far it has got', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 9, startDate: '2025-06-05' })
+    await logEvery({ training, athlete, number: 9, ordinal: 5, except: [] })
+
+    const [shelved] = await training.listWeeks({ userId: athlete, today: AFTERWARDS })
+
+    expect(shelved?.days).toEqual([
+      { ordinal: 5, kind: 'training', date: '2025-06-09', complete: true, touched: true },
+      { ordinal: 6, kind: 'rest', date: '2025-06-10', complete: true, touched: false },
+      { ordinal: 7, kind: 'training', date: '2025-06-11', complete: false, touched: false },
+    ])
+  })
+
+  test('a Day part way through is neither done nor untouched', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await logEvery({ training, athlete, number: 20, ordinal: 1, except: ['dips'] })
+
+    expect(await shelvedDay({ training, athlete, number: 20, ordinal: 1, today: AFTERWARDS })).toMatchObject({
+      complete: false,
+      touched: true,
+    })
+  })
+
+  test('a rest Day is done once its date has passed on the athlete\u2019s own clock', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 9, startDate: '2025-06-05' })
+
+    const onTheDay = await shelvedDay({ training, athlete, number: 9, ordinal: 6, today: '2025-06-10' })
+    const afterIt = await shelvedDay({ training, athlete, number: 9, ordinal: 6, today: '2025-06-11' })
+
+    expect(onTheDay.complete).toBe(false)
+    expect(afterIt.complete).toBe(true)
+  })
+
+  test('a Day whose only record is the athlete\u2019s note on it counts as touched', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logDay({ userId: athlete, today: AFTERWARDS, weekNumber: 20, dayOrdinal: 4, note: 'walked 5km' })
+
+    expect(await shelvedDay({ training, athlete, number: 20, ordinal: 4, today: '2025-08-26' })).toMatchObject({
+      kind: 'rest',
+      complete: false,
+      touched: true,
+    })
+  })
+
+  test('a Day whose only record is an orphaned Log counts as touched', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'good', note: null },
+    })
+
+    await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
+      }),
+      startDate: '2025-08-25',
+    })
+
+    // The plan no longer asks for what was done, so the Day is not done — but it is
+    // not untouched either: the work happened.
+    expect(await shelvedDay({ training, athlete, number: 20, ordinal: 1, today: AFTERWARDS })).toMatchObject({
+      complete: false,
+      touched: true,
+    })
+  })
+
+  test('a Day asking for nothing but Optional work is done with nothing logged', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    expect(await shelvedDay({ training, athlete, number: 20, ordinal: 7, today: AFTERWARDS })).toMatchObject({
+      complete: true,
+      touched: false,
+    })
+  })
+
+  test('a Week the coach wrote with no Days at all holds none on the shelf', async () => {
+    const { training, athlete } = await openApp()
+
+    await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days = []
+      }),
+      startDate: '2025-08-25',
+    })
+
+    expect(await training.listWeeks({ userId: athlete, today: AFTERWARDS })).toEqual([
+      { number: 20, startDate: '2025-08-25', endDate: null, current: false, days: [] },
+    ])
+  })
+
+  test('a gap a Revision left in the ordinals stays a gap, and dates the rest from theirs', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days = week.days.filter((one: any) => one.ordinal !== 4)
+      }),
+      startDate: '2025-08-25',
+    })
+
+    const [shelved] = await training.listWeeks({ userId: athlete, today: AFTERWARDS })
+
+    expect(shelved?.days.map((one) => [one.ordinal, one.date])).toEqual([
+      [1, '2025-08-25'],
+      [2, '2025-08-26'],
+      [3, '2025-08-27'],
+      [5, '2025-08-29'],
+      [6, '2025-08-30'],
+      [7, '2025-08-31'],
     ])
   })
 

@@ -1,6 +1,7 @@
 export type {
   CurrentDay,
   Day,
+  DayOnShelf,
   Difficulty,
   Exercise,
   ImportFault,

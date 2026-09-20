@@ -1,13 +1,10 @@
 import { logFor, tally } from './logging.ts'
+import { markOf } from './marks.ts'
 import type { Taps } from './logging.ts'
+import type { Mark } from './marks.ts'
 import type { Day, Week, Weekday } from '../../../shared/training.ts'
 
-/**
- * How much of a Day has happened, in the three states a strip of Days can hold.
- * `part` is deliberately not "started": a Day carrying only a note ("walked") has
- * nothing logged on it and is still a Day something happened on.
- */
-export type Mark = 'done' | 'part' | 'untouched'
+export type { Mark } from './marks.ts'
 
 /** One Day as the strip at the top of the Week shows it. */
 export type Pill = {
@@ -30,15 +27,13 @@ export type Notes = Readonly<Record<number, string>>
 export function pillsOf({ week, taps, notes }: { week: Week; taps: Taps; notes: Notes }): Pill[] {
   return week.days
     .toSorted((one, other) => one.ordinal - other.ordinal)
-    .map((day) => ({ ordinal: day.ordinal, weekday: day.weekday, mark: markOf({ day, taps, notes }) }))
-}
-
-function markOf({ day, taps, notes }: { day: Day; taps: Taps; notes: Notes }): Mark {
-  if (tally({ taps, day }).complete) {
-    return 'done'
-  }
-
-  return touched({ day, taps, notes }) ? 'part' : 'untouched'
+    .map((day) => ({
+      ordinal: day.ordinal,
+      weekday: day.weekday,
+      // The same two questions the Shelf's strip asks, answered here against what has
+      // been tapped on screen rather than against what the server has been told.
+      mark: markOf({ complete: tally({ taps, day }).complete, touched: touched({ day, taps, notes }) }),
+    }))
 }
 
 /**

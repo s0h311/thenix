@@ -6,24 +6,15 @@ import { Chip } from '../UI/Chip.tsx'
 import { TextArea } from '../UI/Field.tsx'
 import { RATINGS, asLogged, headingOf, progressOf } from '../../libs/Training/day.ts'
 import { logFor, noTaps, noteOf, tapOf, withTap } from '../../libs/Training/logging.ts'
+import { MARKS } from '../../libs/Training/marks.ts'
 import { asDate, asLoad, asPrescribed, asRest } from '../../libs/Training/notation.ts'
 import { openOn } from '../../libs/Training/opening.ts'
 import { pillsOf } from '../../libs/Training/pills.ts'
 import type { Logged, Noted, Taps } from '../../libs/Training/logging.ts'
 import type { Picked } from '../../libs/Training/opening.ts'
-import type { Mark, Pill } from '../../libs/Training/pills.ts'
+import type { Pill } from '../../libs/Training/pills.ts'
 import type { ChangeEvent, MouseEvent, ReactNode } from 'react'
 import type { Day, Difficulty, Exercise, Log, Orphan, Week } from '../../../shared/training.ts'
-
-/**
- * A Day's state on the strip, as a shape and as a word. Both, always: the fill
- * alone does not survive a glance in daylight, and the word is what is read out.
- */
-const MARKS: Record<Mark, { glyph: string; said: string }> = {
-  done: { glyph: '✓', said: 'done' },
-  part: { glyph: '•', said: 'part trained' },
-  untouched: { glyph: '○', said: 'untouched' },
-}
 
 const PILL =
   'flex shrink-0 flex-col items-center gap-0.5 rounded-xl border border-hairline bg-raised px-3 py-2 text-ink-muted transition duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand aria-[current=true]:border-transparent aria-[current=true]:bg-brand aria-[current=true]:font-semibold aria-[current=true]:text-on-brand'

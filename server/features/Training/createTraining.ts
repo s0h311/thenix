@@ -9,6 +9,7 @@ import type { PlannedWeek } from './forCoach.ts'
 import type {
   CurrentDay,
   Day,
+  DayOnShelf,
   Difficulty,
   Exercise,
   ImportResult,
@@ -27,7 +28,7 @@ type Dependencies = {
 }
 
 /** A Week reduced to when it ran — what both the shelf and "which Week is now" need. */
-type Span = Omit<WeekOnShelf, 'current'>
+type Span = Omit<WeekOnShelf, 'current' | 'days'>
 
 type ExerciseRow = { exercise: typeof exercise.$inferSelect; log: typeof log.$inferSelect | null }
 
@@ -121,7 +122,10 @@ export function createTraining({ database }: Dependencies) {
 
     return {
       ...planned,
-      days: planned.days.map((day) => ({ ...day, complete: isComplete({ ...day, today }) })),
+      days: planned.days.map((day) => ({
+        ...day,
+        complete: isComplete({ ...day, exercises: asked(day.exercises), today }),
+      })),
     }
   }
 
@@ -171,6 +175,69 @@ export function createTraining({ database }: Dependencies) {
           row.lastOrdinal === null ? null : dateOfDay({ startDate: row.startDate, ordinal: row.lastOrdinal }).date,
       }))
       .toSorted((one, other) => other.startDate.localeCompare(one.startDate))
+  }
+
+  /**
+   * Every Day of every Week the athlete has, marked. Twenty Weeks are not read whole
+   * to build a shelf that shows no plan: two queries carry the only two questions a
+   * mark asks — what the Day still asks for, and whether anything was recorded on it.
+   */
+  async function daysOnShelf({ userId, today }: { userId: string; today: string }): Promise<Map<number, DayOnShelf[]>> {
+    const dayRows = await database
+      .select({
+        number: week.number,
+        startDate: week.startDate,
+        ordinal: day.ordinal,
+        kind: day.kind,
+        noted: dayLog.id,
+      })
+      .from(day)
+      .innerJoin(week, eq(week.id, day.weekId))
+      .leftJoin(dayLog, eq(dayLog.dayId, day.id))
+      .where(eq(week.userId, userId))
+      .orderBy(asc(day.ordinal))
+
+    // Dropped Exercises come too: their Logs are Orphans, and an Orphan is one of the
+    // three things that make a Day touched.
+    const exerciseRows = await database
+      .select({
+        number: week.number,
+        ordinal: day.ordinal,
+        optional: exercise.optional,
+        dropped: exercise.dropped,
+        logged: log.id,
+      })
+      .from(exercise)
+      .innerJoin(day, eq(day.id, exercise.dayId))
+      .innerJoin(week, eq(week.id, day.weekId))
+      .leftJoin(log, eq(log.exerciseId, exercise.id))
+      .where(eq(week.userId, userId))
+
+    const shelf = new Map<number, DayOnShelf[]>()
+
+    for (const row of dayRows) {
+      const onDay = exerciseRows.filter((one) => one.number === row.number && one.ordinal === row.ordinal)
+      const kind = row.kind as Day['kind']
+      const { date } = dateOfDay({ startDate: row.startDate, ordinal: row.ordinal })
+
+      shelf.set(row.number, [
+        ...(shelf.get(row.number) ?? []),
+        {
+          ordinal: row.ordinal,
+          kind,
+          date,
+          complete: isComplete({
+            kind,
+            date,
+            exercises: onDay.filter((one) => !one.dropped).map((one) => ({ ...one, logged: one.logged !== null })),
+            today,
+          }),
+          touched: row.noted !== null || onDay.some((one) => one.logged !== null),
+        },
+      ])
+    }
+
+    return shelf
   }
 
   async function writeWeek({
@@ -513,8 +580,13 @@ export function createTraining({ database }: Dependencies) {
     async listWeeks({ userId, today }: { userId: string; today: string }): Promise<WeekOnShelf[]> {
       const spans = await weekSpans({ userId })
       const current = currentIn({ spans, today })
+      const days = await daysOnShelf({ userId, today })
 
-      return spans.map((span) => ({ ...span, current: span.number === current }))
+      return spans.map((span) => ({
+        ...span,
+        current: span.number === current,
+        days: days.get(span.number) ?? [],
+      }))
     },
 
     /** What the app opens on: today's Day, and the Week it sits in. */
@@ -559,7 +631,8 @@ function isComplete({
 }: {
   kind: Day['kind']
   date: string
-  exercises: Exercise[]
+  /** Only what the Day asks for, reduced to the two things that decide it. */
+  exercises: Asked[]
   today: string
 }): boolean {
   // A rest Day asks for nothing, so the only thing that can finish it is the clock —
@@ -568,7 +641,18 @@ function isComplete({
     return date < today
   }
 
-  return exercises.every((one) => one.optional || one.log !== null)
+  return exercises.every((one) => one.optional || one.logged)
+}
+
+/**
+ * What the Day asks for, as completion measures it. An Exercise a Revision dropped
+ * is never here: it is not asked for any more, and its Log is an Orphan — something
+ * recorded on the Day rather than something outstanding on it.
+ */
+type Asked = { optional: boolean; logged: boolean }
+
+function asked(exercises: Exercise[]): Asked[] {
+  return exercises.map((one) => ({ optional: one.optional, logged: one.log !== null }))
 }
 
 function toExercise({ exercise: row, log: logRow }: ExerciseRow): Exercise {

@@ -24,8 +24,10 @@ _Avoid_: Plan, block, cycle
 
 **Shelf**:
 Every Week the athlete has imported, most recent first, with the Week being trained
-marked in words rather than by date arithmetic. What makes twenty Weeks something to
-look back through. A Week on the shelf is not read-only: last week's makeup session is
+marked in words rather than by date arithmetic. Each Week is a card carrying its
+number, the dates it ran between and a strip of its Days' marks, so twenty Weeks of
+consistency read at a glance rather than as twenty identical rows. What makes twenty
+Weeks something to look back through. A Week on the shelf is not read-only: last week's makeup session is
 logged against the Week it belongs to, and opening one puts its first Day on screen —
 its plan and its Logs, with no tap first, because it holds no today to open on.
 _Avoid_: History, archive, list

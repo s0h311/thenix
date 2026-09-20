@@ -142,6 +142,20 @@ export type Revision = {
 }
 
 /**
+ * One Day of a Week as the shelf shows it: where it falls, and how far it got.
+ * Deliberately not its plan — a strip of twenty Weeks is read, not trained from.
+ */
+export type DayOnShelf = {
+  ordinal: number
+  kind: Day['kind']
+  date: string
+  /** The same rule a read Week uses: what it asks for, and the clock for a rest Day. */
+  complete: boolean
+  /** Anything at all recorded on it — a Log, the Day's own note, or an Orphan. */
+  touched: boolean
+}
+
+/**
  * A Week as the shelf shows it: enough to pick one out of twenty and open it, and
  * deliberately not its plan. The number is the coach's own, taken from the JSON.
  */
@@ -152,6 +166,8 @@ export type WeekOnShelf = {
   endDate: string | null
   /** The Week today falls inside — marked, so the shelf orients without dates. */
   current: boolean
+  /** Its Days in order, so twenty Weeks of consistency read at a glance. */
+  days: DayOnShelf[]
 }
 
 /** Today, as the app opens on it: the Week being trained, and today's Day within it. */
