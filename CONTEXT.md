@@ -102,8 +102,17 @@ The parse shown before anything is written: the Week as the app read it, never t
 text that was pasted. Confirming is a second step, so a Week that read differently
 from what the athlete expected is caught while the shelf is still untouched. It is
 also where the start date is picked — the day after the last Week ended, or the next
-Monday when there is none, because the coach writes no weekday at all.
+Monday when there is none, because the coach writes no weekday at all. A Revision is
+the exception: it is offered the date its Week already runs on.
 _Avoid_: Draft, dry run, staging
+
+**Revision**:
+An Import of a Week number already on the shelf. It replaces the plan and keeps the
+Logs, so it is not a new Week and never moves one: the dates it is already trained on
+are the dates it keeps, and the Preview says what is being replaced and how much is
+recorded against it before the athlete confirms. A Day or Exercise a Revision no
+longer asks for becomes an Orphan rather than a deletion.
+_Avoid_: Update, re-import as a second Week, correction
 
 **Export**:
 Emitting a Week with its Logs as JSON, for the coach to read when writing the next Week.

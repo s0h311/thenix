@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { asDate, asLoad, asPrescribed, asRest, asSpan } from './notation.ts'
+import { asDate, asLoad, asPrescribed, asRest, asRevision, asSpan } from './notation.ts'
 import type { Prescription, Side } from '../../../shared/training.ts'
 
 /** The coach's own notation, as the Week prose writes it. */
@@ -110,5 +110,25 @@ describe('when a Week ran', () => {
 
   test('a Week with no Days at all is shown by where it starts', () => {
     expect(asSpan({ startDate: '2025-08-25', endDate: null })).toBe('25 Aug')
+  })
+})
+
+describe('a Week the paste would revise', () => {
+  test('it names the Week, when it runs, and what is recorded against it', () => {
+    expect(asRevision({ number: 12, revising: { startDate: '2025-06-23', logged: 4 } })).toBe(
+      'Week 12 is already on your shelf, from 23 Jun, with 4 Logs on it. Importing replaces the plan and keeps your Logs.',
+    )
+  })
+
+  test('one Log is one Log, not 1 Logs', () => {
+    expect(asRevision({ number: 12, revising: { startDate: '2025-06-23', logged: 1 } })).toBe(
+      'Week 12 is already on your shelf, from 23 Jun, with 1 Log on it. Importing replaces the plan and keeps your Logs.',
+    )
+  })
+
+  test('a Week nothing was recorded against promises nothing about Logs', () => {
+    expect(asRevision({ number: 12, revising: { startDate: '2025-06-23', logged: 0 } })).toBe(
+      'Week 12 is already on your shelf, from 23 Jun. Importing replaces its plan.',
+    )
   })
 })

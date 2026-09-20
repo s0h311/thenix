@@ -131,6 +131,17 @@ export type WeekPreview = {
 }
 
 /**
+ * The Week already on the shelf under the number the athlete just pasted. Confirming
+ * revises that Week rather than adding one, so the preview names what is there: the
+ * dates it is already being trained on, and everything recorded against it.
+ */
+export type Revision = {
+  startDate: string
+  /** Logs written against it, orphans and Day notes included. */
+  logged: number
+}
+
+/**
  * A Week as the shelf shows it: enough to pick one out of twenty and open it, and
  * deliberately not its plan. The number is the coach's own, taken from the JSON.
  */

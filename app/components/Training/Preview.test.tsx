@@ -2,7 +2,7 @@ import { expect, describe, test } from 'vitest'
 import { page } from 'vitest/browser'
 import { createRoot } from 'react-dom/client'
 import { Preview } from './Preview.tsx'
-import type { WeekPreview } from '../../../shared/training.ts'
+import type { Revision, WeekPreview } from '../../../shared/training.ts'
 
 /** A Week as it came back from the parser: two training Days and a rest Day. */
 const WEEK: WeekPreview = {
@@ -24,10 +24,12 @@ const WEEK: WeekPreview = {
 
 function openPreview({
   startDate = '2025-09-01',
+  revising = null,
   onConfirm = () => {},
   onBack = () => {},
 }: {
   startDate?: string
+  revising?: Revision | null
   onConfirm?: (startDate: string) => void
   onBack?: () => void
 }) {
@@ -38,6 +40,7 @@ function openPreview({
     <Preview
       preview={WEEK}
       startDate={startDate}
+      revising={revising}
       onConfirm={onConfirm}
       onBack={onBack}
     />,
@@ -72,6 +75,18 @@ describe('the Week before it is imported', () => {
     const screen = openPreview({ startDate: '2025-09-01' })
 
     await expect.element(screen.getByLabelText(/Starts on/)).toHaveValue('2025-09-01')
+  })
+
+  test('a Week number already on the shelf says so before it is replaced', async () => {
+    const screen = openPreview({ revising: { startDate: '2025-08-25', logged: 4 }, startDate: '2025-08-25' })
+
+    await expect.element(screen.getByText(/already on your shelf, from 25 Aug, with 4 Logs/)).toBeVisible()
+  })
+
+  test('a Week the athlete has never imported says nothing about replacing one', async () => {
+    const screen = openPreview({})
+
+    expect(screen.getByText(/already on your shelf/).elements()).toEqual([])
   })
 
   test('confirming imports it on the date shown', async () => {

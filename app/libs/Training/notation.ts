@@ -1,4 +1,4 @@
-import type { Load, Prescription, Range, Side, Weight } from '../../../shared/training.ts'
+import type { Load, Prescription, Range, Revision, Side, Weight } from '../../../shared/training.ts'
 
 const EN_DASH = '–'
 
@@ -86,6 +86,23 @@ export function asDate(date: string): string {
 /** The stretch a Week covers. A Week with no Days at all is shown by where it starts. */
 export function asSpan({ startDate, endDate }: { startDate: string; endDate: string | null }): string {
   return endDate === null ? asDate(startDate) : `${asDate(startDate)} ${EN_DASH} ${asDate(endDate)}`
+}
+
+/**
+ * What confirming would land on, for a Week number the athlete already has. A
+ * revision replaces the plan, so the Logs are said out loud: the athlete is being
+ * asked to overwrite a Week they may be halfway through training.
+ */
+export function asRevision({ number, revising }: { number: number; revising: Revision }): string {
+  const shelf = `Week ${number} is already on your shelf, from ${asDate(revising.startDate)}`
+
+  if (revising.logged === 0) {
+    return `${shelf}. Importing replaces its plan.`
+  }
+
+  const logs = revising.logged === 1 ? '1 Log' : `${revising.logged} Logs`
+
+  return `${shelf}, with ${logs} on it. Importing replaces the plan and keeps your Logs.`
 }
 
 function withImplement({ written, implement }: { written: string; implement?: string | null }): string {

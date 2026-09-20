@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { WeekPreview } from '../../../shared/training.ts'
+import { asRevision } from '../../libs/Training/notation.ts'
+import type { Revision, WeekPreview } from '../../../shared/training.ts'
 
 /**
  * The Week as it parsed, with the date it would start on — the step between pasting
@@ -10,12 +11,15 @@ import type { WeekPreview } from '../../../shared/training.ts'
 export function Preview({
   preview,
   startDate,
+  revising,
   onConfirm,
   onBack,
 }: {
   preview: WeekPreview
   /** Where the Week would start unless the athlete says otherwise. */
   startDate: string
+  /** The Week this paste would replace, when the athlete already has that number. */
+  revising: Revision | null
   onConfirm: (startDate: string) => void
   onBack: () => void
 }) {
@@ -25,6 +29,11 @@ export function Preview({
     <section className='space-y-4'>
       <h2 className='text-xl font-semibold'>Week {preview.number}, as it read</h2>
       <p>Check this is the Week your coach wrote, then pick the day it starts.</p>
+      {revising === null ? null : (
+        <p className='rounded-md bg-brand-surface px-3 py-2 font-semibold text-brand'>
+          {asRevision({ number: preview.number, revising })}
+        </p>
+      )}
       {preview.notes === null ? null : <p className='text-sm'>{preview.notes}</p>}
 
       {preview.days.map((day) => (

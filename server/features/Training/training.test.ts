@@ -641,6 +641,36 @@ describe('importing the same Week number twice', () => {
     expect(day.orphans).toEqual([])
     expect(day.exercises.find((one) => one.key === 'dips')?.log).toEqual({ kind: 'skipped', note: 'shoulder' })
   })
+
+  test('a correction taken mid-week at the date it offers leaves today’s training where it was', async () => {
+    const { training, athlete } = await openApp()
+    const wednesday = '2025-06-25'
+
+    await importedWeek({ training, athlete, number: 12, startDate: '2025-06-23' })
+    await training.logExercise({
+      userId: athlete,
+      today: wednesday,
+      weekNumber: 12,
+      dayOrdinal: 1,
+      exerciseKey: 'incline-push-ups',
+      log: { kind: 'difficulty', difficulty: 'good', note: null },
+    })
+
+    const offered = await training.previewWeek({ userId: athlete, json: coachJson(12), today: wednesday })
+
+    await training.importWeek({
+      userId: athlete,
+      json: coachJson(12),
+      startDate: offered.ok ? offered.startDate : 'never offered',
+      today: wednesday,
+    })
+
+    const current = await training.getCurrentDay({ userId: athlete, today: wednesday })
+
+    expect(current?.week.number).toBe(12)
+    expect(current?.day?.ordinal).toBe(3)
+    expect(dayIn(current?.week ?? null, 1).date).toBe('2025-06-23')
+  })
 })
 
 describe('a Week the coach got wrong', () => {
@@ -800,6 +830,41 @@ describe('previewing the Week before it is saved', () => {
       { day: 3, exercise: 'kickstand-rdl', field: 'load.value', message: expect.any(String) },
     ])
   })
+
+  test('a Week number already on the shelf previews as the revision it is', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 12, startDate: '2025-06-26' })
+    await training.logExercise({
+      userId: athlete,
+      weekNumber: 12,
+      dayOrdinal: 1,
+      exerciseKey: 'incline-push-ups',
+      log: { kind: 'difficulty', difficulty: 'good', note: null },
+      today: AFTERWARDS,
+    })
+    await training.logDay({
+      userId: athlete,
+      weekNumber: 12,
+      dayOrdinal: 2,
+      note: 'ran it in the rain',
+      today: AFTERWARDS,
+    })
+
+    const result = await training.previewWeek({ userId: athlete, json: coachJson(12), today: AFTERWARDS })
+
+    expect(result.ok ? result.revising : null).toEqual({ startDate: '2025-06-26', logged: 2 })
+  })
+
+  test('a Week the athlete has never imported is not a revision of anything', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 12, startDate: '2025-06-26' })
+
+    const result = await training.previewWeek({ userId: athlete, json: coachJson(20), today: AFTERWARDS })
+
+    expect(result.ok ? result.revising : 'not previewed').toBeNull()
+  })
 })
 
 describe('the date a pasted Week would start on', () => {
@@ -811,6 +876,16 @@ describe('the date a pasted Week would start on', () => {
     const result = await training.previewWeek({ userId: athlete, json: coachJson(12), today: AFTERWARDS })
 
     expect(result.ok ? result.startDate : null).toBe('2025-09-01')
+  })
+
+  test('a revision of a Week already on the shelf starts where that Week already starts', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 12, startDate: '2025-06-26' })
+
+    const result = await training.previewWeek({ userId: athlete, json: coachJson(12), today: AFTERWARDS })
+
+    expect(result.ok ? result.startDate : null).toBe('2025-06-26')
   })
 
   test('with nothing on the shelf it is the next Monday, because the coach wrote no weekday', async () => {

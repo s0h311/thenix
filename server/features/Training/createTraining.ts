@@ -15,6 +15,7 @@ import type {
   Log,
   Orphan,
   PreviewResult,
+  Revision,
   Week,
   WeekOnShelf,
   WeekPreview,
@@ -122,6 +123,30 @@ export function createTraining({ database }: Dependencies) {
       ...planned,
       days: planned.days.map((day) => ({ ...day, complete: isComplete({ ...day, today }) })),
     }
+  }
+
+  /**
+   * What a paste of this Week number would land on: the Week already on the shelf
+   * under it, if there is one. A revision replaces the plan and keeps the Logs, so
+   * both of those are what the athlete is asked to confirm.
+   */
+  async function revisionOf({ userId, number }: { userId: string; number: number }): Promise<Revision | null> {
+    const planned = await loadWeek({ userId, number })
+
+    if (planned === null) {
+      return null
+    }
+
+    const logged = planned.days.reduce(
+      (running, day) =>
+        running +
+        (day.log === null ? 0 : 1) +
+        day.exercises.filter((one) => one.log !== null).length +
+        day.orphans.length,
+      0,
+    )
+
+    return { startDate: planned.startDate, logged }
   }
 
   /**
@@ -333,12 +358,16 @@ export function createTraining({ database }: Dependencies) {
         return { ok: false, errors: parsed.errors }
       }
 
+      const revising = await revisionOf({ userId, number: parsed.week.number })
       const ends = (await weekSpans({ userId })).flatMap((span) => (span.endDate === null ? [] : [span.endDate]))
 
       return {
         ok: true,
         preview: asPreview(parsed.week),
-        startDate: startAfter({ previousEnd: ends.toSorted().at(-1) ?? null, today }),
+        revising,
+        // A revision is the same Week over again, so it keeps the dates it is already
+        // trained on: a mid-week correction must not move the Days already logged.
+        startDate: revising?.startDate ?? startAfter({ previousEnd: ends.toSorted().at(-1) ?? null, today }),
       }
     },
 

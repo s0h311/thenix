@@ -5,7 +5,7 @@ import { CopyButton } from '../components/Training/CopyButton.tsx'
 import { Faults } from '../components/Training/Faults.tsx'
 import { Preview } from '../components/Training/Preview.tsx'
 import { copyRegistry, copySchema } from '../libs/Training/export.ts'
-import type { ImportFault, WeekPreview } from '../../shared/training.ts'
+import type { ImportFault, Revision, WeekPreview } from '../../shared/training.ts'
 
 export const Route = createFileRoute('/import')({
   component: ImportPage,
@@ -27,7 +27,9 @@ type ImportedWeek = {
   }[]
 }
 
-type PreviewResult = { ok: true; preview: WeekPreview; startDate: string } | { ok: false; errors: ImportFault[] }
+type PreviewResult =
+  | { ok: true; preview: WeekPreview; startDate: string; revising: Revision | null }
+  | { ok: false; errors: ImportFault[] }
 type ImportResult = { ok: true; week: ImportedWeek } | { ok: false; errors: ImportFault[] }
 
 /**
@@ -37,7 +39,7 @@ type ImportResult = { ok: true; week: ImportedWeek } | { ok: false; errors: Impo
  */
 type Stage =
   | { at: 'pasting' }
-  | { at: 'previewing'; preview: WeekPreview; startDate: string }
+  | { at: 'previewing'; preview: WeekPreview; startDate: string; revising: Revision | null }
   | { at: 'rejected'; faults: ImportFault[] }
   | { at: 'imported'; week: ImportedWeek }
 
@@ -68,7 +70,7 @@ function ImportPage() {
 
     setStage(
       result.ok
-        ? { at: 'previewing', preview: result.preview, startDate: result.startDate }
+        ? { at: 'previewing', preview: result.preview, startDate: result.startDate, revising: result.revising }
         : { at: 'rejected', faults: result.errors },
     )
     setWorking(false)
@@ -116,6 +118,7 @@ function ImportPage() {
         <Preview
           preview={stage.preview}
           startDate={stage.startDate}
+          revising={stage.revising}
           onConfirm={confirm}
           onBack={() => setStage({ at: 'pasting' })}
         />
