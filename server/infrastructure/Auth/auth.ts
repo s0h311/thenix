@@ -3,7 +3,6 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { db } from '../Database/client.ts'
 import { account, session, user, verification } from '../Database/schemas/auth.ts'
 import { sendMail } from '../Mail/client.ts'
-import { admin } from 'better-auth/plugins'
 import { logInfo } from '../Utils/logging.ts'
 import { getHost } from '../Utils/getHost.ts'
 import { getBaseUrl } from '../Utils/getBaseUrl.ts'
@@ -11,7 +10,6 @@ import { getBaseUrl } from '../Utils/getBaseUrl.ts'
 const FEATURE = 'libs/Auth auth'
 
 export const auth = betterAuth({
-  plugins: [admin()],
   emailAndPassword: {
     disableSignUp: true,
     enabled: true,
@@ -35,14 +33,6 @@ export const auth = betterAuth({
     },
   },
   user: {
-    additionalFields: {
-      role: {
-        type: ['shop', 'admin'],
-        required: true,
-        defaultValue: 'shop',
-        input: false,
-      },
-    },
     deleteUser: {
       enabled: true,
     },

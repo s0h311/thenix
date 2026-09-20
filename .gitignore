@@ -13,6 +13,8 @@ dist
 
 .matrix/last_commits.json
 .matrix/open_issues.json
-.matrix/prompt.md
+.matrix/*_prompt.md
 
 .env
+
+training-plans
