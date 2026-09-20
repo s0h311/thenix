@@ -27,7 +27,8 @@
     "pino": "^10.3.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@rolldown/plugin-babel": "^0.2.3",
