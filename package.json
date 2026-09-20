@@ -7,7 +7,11 @@
     "preview": "vite preview",
     "test": "vitest",
     "lint": "oxlint --fix",
-    "fmt": "oxfmt"
+    "fmt": "oxfmt",
+    "gen:schema": "pnpm dlx @better-auth/cli@latest generate --config ./server/infrastructe/Auth/auth.ts --output ./server/infrastructe/Database/schemas/auth.ts",
+    "gen:migration": "drizzle-kit generate",
+    "migrate": "node --env-file=.env scripts/migrate.ts",
+    "matrix": "node --env-file .env /Users/soheil/projects/matrix/src/index.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
