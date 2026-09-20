@@ -11,12 +11,22 @@ export function AppHeader() {
         <Link to='/'>
           <Logo />
         </Link>
-        <Link
-          to={session ? '/account' : '/sign-in'}
-          className='font-semibold text-brand'
-        >
-          {session ? 'Account' : 'Sign in'}
-        </Link>
+        <nav className='flex items-center gap-4'>
+          {session ? (
+            <Link
+              to='/weeks'
+              className='font-semibold text-brand'
+            >
+              Weeks
+            </Link>
+          ) : null}
+          <Link
+            to={session ? '/account' : '/sign-in'}
+            className='font-semibold text-brand'
+          >
+            {session ? 'Account' : 'Sign in'}
+          </Link>
+        </nav>
       </div>
     </header>
   )

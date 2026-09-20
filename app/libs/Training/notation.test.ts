@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { asLoad, asPrescribed, asRest } from './notation.ts'
+import { asDate, asLoad, asPrescribed, asRest, asSpan } from './notation.ts'
 import type { Prescription, Side } from '../../../shared/training.ts'
 
 /** The coach's own notation, as the Week prose writes it. */
@@ -96,5 +96,19 @@ describe('the rest in the coach’s notation', () => {
 
   test('a rest range keeps both ends', () => {
     expect(asRest({ min: 120, max: 180 })).toBe('rest 2–3 min')
+  })
+})
+
+describe('when a Week ran', () => {
+  test('a date reads as the athlete says it, the year left out', () => {
+    expect(asDate('2025-08-25')).toBe('25 Aug')
+  })
+
+  test('a Week spans from its first Day to its last', () => {
+    expect(asSpan({ startDate: '2025-08-25', endDate: '2025-08-31' })).toBe('25 Aug – 31 Aug')
+  })
+
+  test('a Week with no Days at all is shown by where it starts', () => {
+    expect(asSpan({ startDate: '2025-08-25', endDate: null })).toBe('25 Aug')
   })
 })

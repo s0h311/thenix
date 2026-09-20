@@ -1,0 +1,127 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { Shelf } from '../components/Training/Shelf.tsx'
+import { WeekView } from '../components/Training/WeekView.tsx'
+import { copyWeek } from '../libs/Training/export.ts'
+import { sendLog, sendNote, today } from '../libs/Training/log.ts'
+import type { Week, WeekOnShelf } from '../../shared/training.ts'
+
+/** Which Week is open lives in the URL, so a Week looked up is a Week that can be gone back to. */
+type Shelved = { number?: number }
+
+export const Route = createFileRoute('/weeks')({
+  validateSearch: (search: Record<string, unknown>): Shelved => {
+    const number = Number(search['number'])
+
+    return Number.isInteger(number) ? { number } : {}
+  },
+  component: ShelfPage,
+})
+
+async function openShelf(): Promise<WeekOnShelf[] | null> {
+  const response = await fetch(`/api/actions/listWeeks?today=${today()}`)
+
+  if (response.status === 401) {
+    return null
+  }
+
+  if (!response.ok) {
+    throw new Error('the Weeks could not be read')
+  }
+
+  return (await response.json()) as WeekOnShelf[]
+}
+
+async function openWeek(number: number): Promise<Week | null> {
+  const response = await fetch(`/api/actions/getWeek?number=${number}&today=${today()}`)
+
+  if (!response.ok) {
+    throw new Error(`Week ${number} could not be read`)
+  }
+
+  return (await response.json()) as Week | null
+}
+
+/**
+ * Every Week, and any one of them opened. A past Week is not a record to be read:
+ * the makeup session trained a week late is logged here, exactly as today's is.
+ */
+function ShelfPage() {
+  const { number } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const queryClient = useQueryClient()
+
+  const shelf = useQuery({ queryKey: ['shelf', today()], queryFn: openShelf })
+  const week = useQuery({
+    queryKey: ['week', number, today()],
+    queryFn: () => openWeek(number ?? 0),
+    enabled: number !== undefined,
+  })
+
+  const settle = { onSettled: () => queryClient.invalidateQueries({ queryKey: ['week'] }) }
+  const { mutate: log } = useMutation({ mutationFn: sendLog, ...settle })
+  const { mutate: note } = useMutation({ mutationFn: sendNote, ...settle })
+
+  // Whether the athlete is signed in is answered once, by the shelf, so an opened
+  // Week never reports "there is no Week 12" when what is missing is the session.
+  if (shelf.isPending) {
+    return <p>Opening your Weeks…</p>
+  }
+
+  if (shelf.data === null || shelf.data === undefined) {
+    return (
+      <div className='space-y-6'>
+        <h1 className='text-2xl font-semibold'>Weeks</h1>
+        <p>Sign in to see your Weeks.</p>
+        <Link
+          to='/sign-in'
+          className='inline-block rounded-md bg-brand px-3 py-2 font-semibold text-white'
+        >
+          Sign in
+        </Link>
+      </div>
+    )
+  }
+
+  if (number !== undefined) {
+    if (week.isPending) {
+      return <p>Opening Week {number}…</p>
+    }
+
+    const opened = week.data ?? null
+
+    return (
+      <div className='space-y-6'>
+        <Link
+          to='/weeks'
+          className='font-semibold text-brand'
+        >
+          ← All Weeks
+        </Link>
+        {opened === null ? (
+          <p>There is no Week {number}.</p>
+        ) : (
+          <WeekView
+            week={opened}
+            // The Week being trained opens on today; a past one holds no today, and
+            // the screen then asks for a Day rather than guessing at one.
+            day={opened.days.find((day) => day.date === today()) ?? null}
+            onLog={(entry) => log({ weekNumber: opened.number, entry })}
+            onNote={(entry) => note({ weekNumber: opened.number, entry })}
+            onExport={() => copyWeek({ number: opened.number })}
+          />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className='space-y-6'>
+      <h1 className='text-2xl font-semibold'>Weeks</h1>
+      <Shelf
+        weeks={shelf.data}
+        onOpen={(opened) => navigate({ search: { number: opened } })}
+      />
+    </div>
+  )
+}

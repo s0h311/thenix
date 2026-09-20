@@ -5,12 +5,15 @@ import { forCoach } from './forCoach.ts'
 import { parseWeek } from './parseWeek.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
 import type { PlannedWeek } from './forCoach.ts'
-import type { CurrentDay, Day, Difficulty, Exercise, ImportResult, Log, Orphan, Week } from './types.ts'
+import type { CurrentDay, Day, Difficulty, Exercise, ImportResult, Log, Orphan, Week, WeekOnShelf } from './types.ts'
 import type { ImportedWeek } from './weekSchema.ts'
 
 type Dependencies = {
   database: Database
 }
+
+/** A Week reduced to when it ran — what both the shelf and "which Week is now" need. */
+type Span = Omit<WeekOnShelf, 'current'>
 
 type ExerciseRow = { exercise: typeof exercise.$inferSelect; log: typeof log.$inferSelect | null }
 
@@ -109,10 +112,10 @@ export function createTraining({ database }: Dependencies) {
   }
 
   /**
-   * The Week today falls inside. A Week runs from its start date to its last Day,
-   * so a Week the coach cut short ends early rather than always filling seven days.
+   * Every Week the athlete has, with the dates it runs between and nothing else —
+   * no plan, no Logs. Most recent first, which is the end the shelf is read from.
    */
-  async function currentWeek({ userId, today }: { userId: string; today: string }): Promise<number | null> {
+  async function weekSpans({ userId }: { userId: string }): Promise<Span[]> {
     const rows = await database
       .select({ number: week.number, startDate: week.startDate, lastOrdinal: max(day.ordinal) })
       .from(week)
@@ -120,19 +123,16 @@ export function createTraining({ database }: Dependencies) {
       .where(eq(week.userId, userId))
       .groupBy(week.id)
 
-    const running = rows.filter((row) => {
-      if (row.lastOrdinal === null) {
-        return false
-      }
-
-      const lastDate = dateOfDay({ startDate: row.startDate, ordinal: row.lastOrdinal }).date
-
-      return row.startDate <= today && today <= lastDate
-    })
-
-    // Weeks should not overlap, but a re-dated import can make them: the one that
-    // started most recently is the one being trained.
-    return running.toSorted((one, other) => other.startDate.localeCompare(one.startDate))[0]?.number ?? null
+    return rows
+      .map((row) => ({
+        number: row.number,
+        startDate: row.startDate,
+        // A Week runs from its start date to its last Day, so a Week the coach cut
+        // short ends early rather than always filling seven days.
+        endDate:
+          row.lastOrdinal === null ? null : dateOfDay({ startDate: row.startDate, ordinal: row.lastOrdinal }).date,
+      }))
+      .toSorted((one, other) => other.startDate.localeCompare(one.startDate))
   }
 
   async function writeWeek({
@@ -382,9 +382,21 @@ export function createTraining({ database }: Dependencies) {
       return noted?.days.find((one) => one.ordinal === dayOrdinal) ?? null
     },
 
+    /**
+     * The shelf: every Week the athlete has imported, most recent first, the one
+     * being trained marked. It carries no plan — twenty Weeks are to be looked
+     * through, and reading one is what opening it is for.
+     */
+    async listWeeks({ userId, today }: { userId: string; today: string }): Promise<WeekOnShelf[]> {
+      const spans = await weekSpans({ userId })
+      const current = currentIn({ spans, today })
+
+      return spans.map((span) => ({ ...span, current: span.number === current }))
+    },
+
     /** What the app opens on: today's Day, and the Week it sits in. */
     async getCurrentDay({ userId, today }: { userId: string; today: string }): Promise<CurrentDay | null> {
-      const number = await currentWeek({ userId, today })
+      const number = currentIn({ spans: await weekSpans({ userId }), today })
 
       if (number === null) {
         return null
@@ -399,6 +411,16 @@ export function createTraining({ database }: Dependencies) {
       return { week: found, day: found.days.find((one) => one.date === today) ?? null }
     },
   }
+}
+
+/**
+ * The Week today falls inside. Weeks should not overlap, but a re-dated import can
+ * make them: the spans come most recent first, so the one that started last wins.
+ */
+function currentIn({ spans, today }: { spans: Span[]; today: string }): number | null {
+  const running = spans.find((span) => span.endDate !== null && span.startDate <= today && today <= span.endDate)
+
+  return running?.number ?? null
 }
 
 /**

@@ -2,6 +2,8 @@ import type { Load, Prescription, Range, Side, Weight } from '../../../shared/tr
 
 const EN_DASH = '–'
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 /**
  * A Prescription in the notation the coach writes it in — `4×6/side`, `3×35s`,
  * `10–11 km @ 6:00–6:10/km`. The structure is what the app counts; this is what the
@@ -72,6 +74,18 @@ export function asRest(restSeconds: Range): string {
 
 function weighing(weight: Weight): string {
   return `${weight.approx ? '~' : ''}${weight.value}${weight.unit}`
+}
+
+/** "25 Aug". The year is left out: a Week is read in the season it was trained. */
+export function asDate(date: string): string {
+  const [, month, dayOfMonth] = date.split('-')
+
+  return `${Number(dayOfMonth)} ${MONTHS[Number(month) - 1]}`
+}
+
+/** The stretch a Week covers. A Week with no Days at all is shown by where it starts. */
+export function asSpan({ startDate, endDate }: { startDate: string; endDate: string | null }): string {
+  return endDate === null ? asDate(startDate) : `${asDate(startDate)} ${EN_DASH} ${asDate(endDate)}`
 }
 
 function withImplement({ written, implement }: { written: string; implement?: string | null }): string {

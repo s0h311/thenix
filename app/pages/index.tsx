@@ -4,19 +4,12 @@ import type { ReactNode } from 'react'
 import { Mark } from '../components/Brand/Mark.tsx'
 import { WeekView } from '../components/Training/WeekView.tsx'
 import { copyWeek } from '../libs/Training/export.ts'
-import type { Logged, Noted } from '../components/Training/WeekView.tsx'
+import { sendLog, sendNote, today } from '../libs/Training/log.ts'
 import type { CurrentDay } from '../../shared/training.ts'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
 })
-
-/** The athlete's local date — the Day being trained is the one where they are. */
-function today(): string {
-  const now = new Date()
-
-  return [now.getFullYear(), `${now.getMonth() + 1}`.padStart(2, '0'), `${now.getDate()}`.padStart(2, '0')].join('-')
-}
 
 type Opened = { signedIn: false } | { signedIn: true; current: CurrentDay | null }
 
@@ -32,28 +25,6 @@ async function openTraining(): Promise<Opened> {
   }
 
   return { signedIn: true, current: (await response.json()) as CurrentDay | null }
-}
-
-/** Sends one tap on its way. The screen has already moved on — this only persists it. */
-async function sendLog({ weekNumber, entry }: { weekNumber: number; entry: Logged }): Promise<void> {
-  await send('/api/actions/logExercise', { weekNumber, today: today(), ...entry })
-}
-
-/** The same, for what belongs to the Day rather than to any Exercise on it. */
-async function sendNote({ weekNumber, entry }: { weekNumber: number; entry: Noted }): Promise<void> {
-  await send('/api/actions/logDay', { weekNumber, today: today(), ...entry })
-}
-
-async function send(action: string, body: object): Promise<void> {
-  const response = await fetch(action, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-
-  if (!response.ok) {
-    throw new Error('the Log could not be saved')
-  }
 }
 
 /** The app opens on today's training. Everything else is a fallback for not having any. */

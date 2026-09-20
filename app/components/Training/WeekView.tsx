@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { asLoad, asPrescribed, asRest } from '../../libs/Training/notation.ts'
+import { asDate, asLoad, asPrescribed, asRest } from '../../libs/Training/notation.ts'
 import type { ChangeEvent, MouseEvent } from 'react'
 import type { Day, Difficulty, Exercise, Log, Orphan, Week } from '../../../shared/training.ts'
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /** The three chips of ADR 0003, in the order the athlete reads them. */
 const RATINGS: { difficulty: Difficulty; label: string }[] = [
@@ -540,7 +538,5 @@ function DayStrip({ week, open, onOpen }: { week: Week; open: number | null; onO
 
 /** "Monday 25 Aug" — the weekday is derived, so it is shown, never stored. */
 function dated(day: Day): string {
-  const [, month, dayOfMonth] = day.date.split('-')
-
-  return `${day.weekday[0]?.toUpperCase()}${day.weekday.slice(1)} ${Number(dayOfMonth)} ${MONTHS[Number(month) - 1]}`
+  return `${day.weekday[0]?.toUpperCase()}${day.weekday.slice(1)} ${asDate(day.date)}`
 }

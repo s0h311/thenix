@@ -102,6 +102,19 @@ export type Week = {
   days: Day[]
 }
 
+/**
+ * A Week as the shelf shows it: enough to pick one out of twenty and open it, and
+ * deliberately not its plan. The number is the coach's own, taken from the JSON.
+ */
+export type WeekOnShelf = {
+  number: number
+  startDate: string
+  /** The date of its last Day. Null for a Week the coach wrote with no Days at all. */
+  endDate: string | null
+  /** The Week today falls inside — marked, so the shelf orients without dates. */
+  current: boolean
+}
+
 /** Today, as the app opens on it: the Week being trained, and today's Day within it. */
 export type CurrentDay = {
   week: Week

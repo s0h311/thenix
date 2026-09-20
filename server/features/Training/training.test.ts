@@ -1185,3 +1185,61 @@ describe('handing the Week back to the coach', () => {
     expect(await training.exportWeek({ userId: other, number: 20 })).toBeNull()
   })
 })
+
+describe('the shelf', () => {
+  test('every imported Week is on the shelf, the most recent first', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 15, startDate: '2025-07-31' })
+    await importedWeek({ training, athlete, number: 9, startDate: '2025-06-05' })
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const shelf = await training.listWeeks({ userId: athlete, today: '2025-08-27' })
+
+    expect(shelf.map((one) => one.number)).toEqual([20, 15, 9])
+  })
+
+  test('the Week today falls inside is the one marked, and it is the only one', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 15, startDate: '2025-07-31' })
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const shelf = await training.listWeeks({ userId: athlete, today: '2025-08-27' })
+
+    expect(shelf.map((one) => ({ number: one.number, current: one.current }))).toEqual([
+      { number: 20, current: true },
+      { number: 15, current: false },
+    ])
+  })
+
+  test('between Weeks the shelf still holds them all, with none of them current', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const shelf = await training.listWeeks({ userId: athlete, today: '2025-09-03' })
+
+    expect(shelf.map((one) => one.number)).toEqual([20])
+    expect(shelf.every((one) => one.current)).toBe(false)
+  })
+
+  test('a Week on the shelf spans from its start date to its last Day', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 9, startDate: '2025-06-05' })
+
+    expect(await training.listWeeks({ userId: athlete, today: AFTERWARDS })).toEqual([
+      { number: 9, startDate: '2025-06-05', endDate: '2025-06-11', current: false },
+    ])
+  })
+
+  test('another athlete\u2019s Weeks are on their shelf, never on this one', async () => {
+    const { training, athlete, database } = await openApp()
+    const other = await signUp({ database, email: 'other@example.com' })
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    expect(await training.listWeeks({ userId: other, today: '2025-08-27' })).toEqual([])
+  })
+})

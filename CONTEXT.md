@@ -22,6 +22,13 @@ A numbered period of training with a start date, containing ordered Days. The un
 import and of export. Its number comes from the imported JSON, never from counting rows.
 _Avoid_: Plan, block, cycle
 
+**Shelf**:
+Every Week the athlete has imported, most recent first, with the Week being trained
+marked in words rather than by date arithmetic. What makes twenty Weeks something to
+look back through. A Week on the shelf is not read-only: last week's makeup session is
+logged against the Week it belongs to.
+_Avoid_: History, archive, list
+
 **Day**:
 One position within a Week, identified by its ordinal (1..n). Its weekday is derived as
 `Week.startDate + (n-1)` and is display only. A Week need not have seven Days.
