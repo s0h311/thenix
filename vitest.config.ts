@@ -17,6 +17,7 @@ export default defineConfig({
     projects: [
       {
         test: {
+          name: 'node',
           // App tests that need no DOM (design tokens, pure helpers) run here as .test.ts;
           // anything that renders is .test.tsx and runs in the browser project below.
           include: ['server/**/*.test.ts', 'shared/**/*.test.ts', 'app/**/*.test.ts'],
@@ -25,6 +26,7 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'browser',
           include: ['app/**/*.test.tsx'],
           browser: {
             provider: playwright(),
