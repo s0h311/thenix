@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { asImport, asMoved, asRevision } from '../../libs/Training/notation.ts'
+import { asAsked, asImport, asMoved, asRevision } from '../../libs/Training/notation.ts'
+import { Button } from '../UI/Button.tsx'
+import { Card } from '../UI/Card.tsx'
+import { TextInput } from '../UI/Field.tsx'
+import { Layer } from '../UI/Layer.tsx'
 import type { Revision, WeekPreview } from '../../../shared/training.ts'
 
 /**
@@ -7,6 +11,10 @@ import type { Revision, WeekPreview } from '../../../shared/training.ts'
  * and saving. What is shown is the parse and never the paste: a Week that read
  * differently from what the athlete expected is only visible from this side, and
  * catching it here costs a second tap instead of a re-import.
+ *
+ * It takes the whole viewport because of what is being confirmed: a paste can
+ * replace the plan of a Week the athlete is halfway through, and reading back seven
+ * Days should not mean scrolling past the box they pasted into.
  */
 export function Preview({
   preview,
@@ -30,68 +38,83 @@ export function Preview({
   const moving = asMoved({ number: preview.number, revising, startsOn })
 
   return (
-    <section className='space-y-4'>
-      <h2 className='text-xl font-semibold'>Week {preview.number}, as it read</h2>
-      <p>Check this is the Week your coach wrote, then pick the day it starts.</p>
-      {revising === null ? null : (
-        <p className='rounded-md bg-legacy-surface px-3 py-2 font-semibold text-legacy'>
-          {asRevision({ number: preview.number, revising })}
-        </p>
-      )}
-      {preview.notes === null ? null : <p className='text-sm'>{preview.notes}</p>}
-
-      {preview.days.map((day) => (
-        <article
-          key={day.ordinal}
-          className='space-y-1'
+    <Layer
+      heading={`Week ${preview.number}, as it read`}
+      dismiss='Paste a different Week'
+      onDismiss={onBack}
+      footer={
+        <Button
+          tone='primary'
+          onClick={() => onConfirm(startsOn)}
+          className='w-full'
         >
-          <h3 className='font-semibold'>{[`Day ${day.ordinal}`, day.focus].filter(Boolean).join(' · ')}</h3>
-          {day.exercises.length === 0 ? (
-            <p className='text-sm'>A Day that asks for nothing.</p>
-          ) : (
-            <ul className='space-y-1 text-sm'>
-              {day.exercises.map((exercise) => (
-                <li key={exercise.key}>
-                  <span className='font-semibold'>{exercise.name}</span> — <span>{exercise.raw}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-      ))}
+          {asImport({ number: preview.number, revising })}
+        </Button>
+      }
+    >
+      <p className='text-ink-muted'>Check this is the Week your coach wrote, then pick the day it starts.</p>
 
-      <label className='flex items-center gap-3 font-semibold'>
-        Starts on
-        <input
+      {revising === null ? null : <Caution>{asRevision({ number: preview.number, revising })}</Caution>}
+
+      {preview.notes === null ? null : (
+        <Card>
+          <p className='whitespace-pre-wrap text-label'>{preview.notes}</p>
+        </Card>
+      )}
+
+      <ul className='space-y-3'>
+        {preview.days.map((day) => (
+          <li key={day.ordinal}>
+            <Card className='space-y-2'>
+              <p className='flex flex-wrap items-baseline gap-x-2 gap-y-1'>
+                <span className='text-heading'>{[`Day ${day.ordinal}`, day.focus].filter(Boolean).join(' · ')}</span>
+                {/* What the Day asks for, before any of it is read: seven headings
+                    differing only in their ordinal cannot be scanned. */}
+                <span className='ml-auto text-label text-ink-muted'>{asAsked(day)}</span>
+              </p>
+              {day.exercises.length === 0 ? null : (
+                <ul className='space-y-1'>
+                  {day.exercises.map((exercise) => (
+                    <li key={exercise.key}>
+                      <p className='font-semibold'>{exercise.name}</p>
+                      {/* The coach's own line, which is what proves the Week read right. */}
+                      <p className='text-label text-ink-muted'>{exercise.raw}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </li>
+        ))}
+      </ul>
+
+      <Card className='space-y-3'>
+        <TextInput
+          label='Starts on'
           type='date'
           required
           value={startsOn}
           onChange={(event) => setStartsOn(event.target.value)}
-          className='rounded-md bg-legacy-surface px-3 py-2 font-normal text-legacy'
+          className='numerals'
         />
-      </label>
-      {moving === null ? null : (
-        <p
-          aria-live='polite'
-          className='rounded-md border border-legacy px-3 py-2 font-semibold text-legacy'
-        >
-          {moving}
-        </p>
-      )}
-      <button
-        type='button'
-        onClick={() => onConfirm(startsOn)}
-        className='w-full rounded-md bg-legacy px-3 py-2 font-semibold text-white'
-      >
-        {asImport({ number: preview.number, revising })}
-      </button>
-      <button
-        type='button'
-        onClick={onBack}
-        className='w-full rounded-md border border-legacy px-3 py-2 font-semibold text-legacy'
-      >
-        Paste a different Week
-      </button>
-    </section>
+        {/* Announced, because it appears while the athlete is inside the date field. */}
+        {moving === null ? null : <Caution live>{moving}</Caution>}
+      </Card>
+    </Layer>
+  )
+}
+
+/**
+ * What confirming costs, in the warning tokens rather than the brand: this is
+ * something to read, never something to press.
+ */
+function Caution({ children, live = false }: { children: string; live?: boolean }) {
+  return (
+    <p
+      aria-live={live ? 'polite' : undefined}
+      className='rounded-lg border border-warning-line bg-warning-soft px-3 py-2 text-label font-semibold text-warning-ink'
+    >
+      {children}
+    </p>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { asDate, asImport, asLoad, asMoved, asPrescribed, asRest, asRevision, asSpan } from './notation.ts'
+import { asAsked, asDate, asImport, asLoad, asMoved, asPrescribed, asRest, asRevision, asSpan } from './notation.ts'
 import type { Prescription, Revision, Side } from '../../../shared/training.ts'
 
 /** The coach's own notation, as the Week prose writes it. */
@@ -179,5 +179,32 @@ describe('re-dating a Week the athlete is already training', () => {
 
   test('a Week number the athlete does not have has nothing to move', () => {
     expect(moved({ revising: null, startsOn: '2025-06-30' })).toBeNull()
+  })
+})
+
+/** What one Day of a pasted Week asks for, read before any of it is written. */
+function asked({ kind, exercises }: { kind: 'training' | 'rest'; exercises: number }): string {
+  return asAsked({ kind, exercises: Array.from({ length: exercises }, () => ({})) })
+}
+
+describe('a Day of a Week as it parsed', () => {
+  test('a Day of work says how much of it there is', () => {
+    expect(asked({ kind: 'training', exercises: 6 })).toBe('6 Exercises')
+  })
+
+  test('a Day asking for one thing does not ask for 1 Exercises', () => {
+    expect(asked({ kind: 'training', exercises: 1 })).toBe('1 Exercise')
+  })
+
+  test('a rest Day says it is a rest Day, not that it holds nothing', () => {
+    expect(asked({ kind: 'rest', exercises: 0 })).toBe('Rest')
+  })
+
+  test('a training Day the coach left empty is named as empty, not as rest', () => {
+    expect(asked({ kind: 'training', exercises: 0 })).toBe('Nothing asked for')
+  })
+
+  test('a Day marked rest that still carries work is read by the work, not by the mark', () => {
+    expect(asked({ kind: 'rest', exercises: 2 })).toBe('2 Exercises')
   })
 })

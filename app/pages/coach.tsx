@@ -109,32 +109,35 @@ function FromYourCoach() {
       heading='From your coach'
       blurb='Paste the Week your coach wrote. You will see what it says before anything is saved.'
     >
-      {stage.at === 'pasting' || stage.at === 'imported' ? (
-        <Card>
-          <form
-            onSubmit={preview}
-            className='space-y-4'
+      {/*
+       * The paste box is never unmounted. The Preview and the fault list are layers
+       * over this screen rather than routes, so leaving either one hands the athlete
+       * back the text they pasted, unchanged and without a re-paste.
+       */}
+      <Card>
+        <form
+          onSubmit={preview}
+          className='space-y-4'
+        >
+          <TextArea
+            label='The Week, as JSON'
+            required
+            rows={10}
+            placeholder='{ "number": 21, "days": [ … ] }'
+            value={json}
+            onChange={(event) => setJson(event.target.value)}
+            className='font-mono text-label'
+          />
+          <Button
+            type='submit'
+            tone='primary'
+            disabled={working}
+            className='w-full'
           >
-            <TextArea
-              label='The Week, as JSON'
-              required
-              rows={10}
-              placeholder='{ "number": 21, "days": [ … ] }'
-              value={json}
-              onChange={(event) => setJson(event.target.value)}
-              className='font-mono text-label'
-            />
-            <Button
-              type='submit'
-              tone='primary'
-              disabled={working}
-              className='w-full'
-            >
-              {working ? 'Reading…' : 'Read it back'}
-            </Button>
-          </form>
-        </Card>
-      ) : null}
+            {working ? 'Reading…' : 'Read it back'}
+          </Button>
+        </form>
+      </Card>
 
       {stage.at === 'previewing' && (
         <Preview

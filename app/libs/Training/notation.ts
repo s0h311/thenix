@@ -178,3 +178,20 @@ function heldFor(seconds: Range): string {
 function bothEnds(range: Range): string {
   return range.min === range.max ? `${range.max}` : `${range.min}${EN_DASH}${range.max}`
 }
+
+/**
+ * What one Day of a pasted Week asks for, in the line above its Exercises. A Week
+ * read back on a full screen is scanned before it is read, and seven headings that
+ * differ only in their ordinal cannot be scanned.
+ *
+ * A Day with no Exercises is read by its kind, so a rest Day is never mistaken for
+ * one the coach left empty; a Day with Exercises is read by them, so a Day marked
+ * rest that still carries work says the work rather than hiding it.
+ */
+export function asAsked({ kind, exercises }: { kind: 'training' | 'rest'; exercises: unknown[] }): string {
+  if (exercises.length > 0) {
+    return counted({ of: exercises.length, one: 'Exercise' })
+  }
+
+  return kind === 'rest' ? 'Rest' : 'Nothing asked for'
+}
