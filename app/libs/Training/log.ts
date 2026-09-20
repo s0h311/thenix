@@ -1,21 +1,36 @@
 import { today } from './clock.ts'
-import type { Logged, Noted } from '../../components/Training/WeekView.tsx'
+import type { Save } from './saving.ts'
 
-/** Sends one tap on its way. The screen has already moved on — this only persists it. */
-export async function sendLog({ weekNumber, entry }: { weekNumber: number; entry: Logged }): Promise<void> {
-  await send('/api/actions/logExercise', { weekNumber, today: today(), ...entry })
-}
+/** Just enough of `fetch` to post one Save and hear whether it landed. */
+type Sender = (
+  url: string,
+  init: { method: string; headers: Record<string, string>; body: string },
+) => Promise<{
+  ok: boolean
+}>
 
-/** The same, for what belongs to the Day rather than to any Exercise on it. */
-export async function sendNote({ weekNumber, entry }: { weekNumber: number; entry: Noted }): Promise<void> {
-  await send('/api/actions/logDay', { weekNumber, today: today(), ...entry })
-}
+/**
+ * Sends one tap on its way. The screen has already moved on — this only persists it,
+ * and throws when it did not, because a Log the server never got is one the athlete
+ * has to be told about rather than one the screen keeps showing as recorded.
+ */
+export async function sendSave({
+  weekNumber,
+  save,
+  on = today(),
+  using = fetch,
+}: {
+  weekNumber: number
+  save: Save
+  on?: string
+  using?: Sender
+}): Promise<void> {
+  const action = save.kind === 'log' ? 'logExercise' : 'logDay'
 
-async function send(action: string, body: object): Promise<void> {
-  const response = await fetch(action, {
+  const response = await using(`/api/actions/${action}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ weekNumber, today: on, ...save.entry }),
   })
 
   if (!response.ok) {

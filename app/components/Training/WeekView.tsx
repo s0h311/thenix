@@ -25,12 +25,17 @@ export function WeekView({
   day,
   onLog,
   onNote,
+  unsaved,
+  onRetry,
   onExport,
 }: {
   week: Week
   day: Day | null
   onLog: (entry: Logged) => void
   onNote: (entry: Noted) => void
+  /** What is still on the phone, in words, or null while the server has it all. */
+  unsaved: string | null
+  onRetry: () => void
   /** Puts this Week, Logs and all, where the coach can be handed it. */
   onExport: () => Promise<void>
 }) {
@@ -52,6 +57,11 @@ export function WeekView({
 
   return (
     <div className='space-y-6'>
+      <Unsaved
+        unsaved={unsaved}
+        onRetry={onRetry}
+      />
+
       {open === null ? (
         <section className='space-y-1'>
           <h1 className='text-2xl font-semibold'>Week {week.number}</h1>
@@ -78,6 +88,35 @@ export function WeekView({
         onOpen={setOpenOrdinal}
       />
     </div>
+  )
+}
+
+/**
+ * The one thing the screen must say out loud. A tap stays on screen the moment it
+ * happens, which is right — and is also why a Log the server never got would sit
+ * there looking recorded. The gym has no signal, the session ends, the Week goes to
+ * the coach short. So it is said plainly, above the Day, and sending it again is a
+ * tap: nothing is asked of the athlete mid-set beyond one they can ignore till later.
+ */
+function Unsaved({ unsaved, onRetry }: { unsaved: string | null; onRetry: () => void }) {
+  if (unsaved === null) {
+    return null
+  }
+
+  return (
+    <section
+      role='alert'
+      className='flex flex-wrap items-center gap-3 rounded-md border-2 border-brand bg-brand-surface px-3 py-2'
+    >
+      <p className='text-sm font-semibold'>{unsaved}</p>
+      <button
+        type='button'
+        onClick={onRetry}
+        className='rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white'
+      >
+        Save them now
+      </button>
+    </section>
   )
 }
 

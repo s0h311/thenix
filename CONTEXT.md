@@ -84,6 +84,14 @@ A Log is the athlete's to take back: emptying a note that was the whole of one l
 the Exercise unlogged again. Only the coach's revision never deletes one — see Orphan.
 _Avoid_: Progress, result, history
 
+**Unsaved**:
+A Log the phone has taken and the server has not. The tap is the save and the screen
+moves on the instant it happens, so the one thing it must never do is go on showing a
+set as recorded when nothing reached the server — a basement gym has no signal and the
+Week goes to the coach short. It is named on screen instead, and sending everything
+held is one tap. It lives only as long as the screen does.
+_Avoid_: Pending, failed, offline
+
 **Orphan**:
 A Log whose Exercise a later revision of the Week dropped. The plan moved on and the
 work did not, so the Log is kept and shown under its Day rather than deleted. A Day the

@@ -178,11 +178,15 @@ function openApp({
   day,
   onLog = () => {},
   onNote = () => {},
+  unsaved = null,
+  onRetry = () => {},
   onExport = async () => {},
 }: {
   day: Day | null
   onLog?: (entry: Logged) => void
   onNote?: (entry: Noted) => void
+  unsaved?: string | null
+  onRetry?: () => void
   onExport?: () => Promise<void>
 }) {
   const container = document.createElement('div')
@@ -194,6 +198,8 @@ function openApp({
       day={day}
       onLog={onLog}
       onNote={onNote}
+      unsaved={unsaved}
+      onRetry={onRetry}
       onExport={onExport}
     />,
   )
@@ -494,5 +500,34 @@ describe('handing the Week to the coach', () => {
     await screen.getByRole('button', { name: /Export for coach/ }).click()
 
     await expect.element(screen.getByText(/could not be copied/)).toBeVisible()
+  })
+})
+
+describe('a Log the server has not got', () => {
+  test('is said out loud, so a dead connection is not mistaken for a saved set', async () => {
+    const screen = openApp({ day: dayOf(1), unsaved: '2 Logs are still on this phone. Check your connection.' })
+
+    await expect.element(screen.getByRole('alert')).toHaveTextContent(/2 Logs are still on this phone/)
+  })
+
+  test('nothing is said while the server has it all', async () => {
+    const screen = openApp({ day: dayOf(1) })
+
+    await expect.element(screen.getByRole('alert')).not.toBeInTheDocument()
+  })
+
+  test('sending them all again is one tap, not one per set', async () => {
+    let tried = 0
+    const screen = openApp({
+      day: dayOf(1),
+      unsaved: '2 Logs are still on this phone. Check your connection.',
+      onRetry: () => {
+        tried += 1
+      },
+    })
+
+    await screen.getByRole('button', { name: /Save them now/ }).click()
+
+    expect(tried).toBe(1)
   })
 })

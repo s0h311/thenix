@@ -1,11 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { Mark } from '../components/Brand/Mark.tsx'
-import { WeekView } from '../components/Training/WeekView.tsx'
+import { TrainingWeek } from '../components/Training/TrainingWeek.tsx'
 import { today } from '../libs/Training/clock.ts'
-import { copyWeek } from '../libs/Training/export.ts'
-import { sendLog, sendNote } from '../libs/Training/log.ts'
 import type { CurrentDay } from '../../shared/training.ts'
 
 export const Route = createFileRoute('/')({
@@ -30,11 +28,7 @@ async function openTraining(): Promise<Opened> {
 
 /** The app opens on today's training. Everything else is a fallback for not having any. */
 function HomePage() {
-  const queryClient = useQueryClient()
   const { data, isPending } = useQuery({ queryKey: ['currentDay', today()], queryFn: openTraining })
-  const settle = { onSettled: () => queryClient.invalidateQueries({ queryKey: ['currentDay'] }) }
-  const { mutate: log } = useMutation({ mutationFn: sendLog, ...settle })
-  const { mutate: note } = useMutation({ mutationFn: sendNote, ...settle })
 
   if (isPending) {
     return <p>Opening today’s training…</p>
@@ -66,15 +60,11 @@ function HomePage() {
     )
   }
 
-  const weekNumber = data.current.week.number
-
   return (
-    <WeekView
+    <TrainingWeek
       week={data.current.week}
       day={data.current.day}
-      onLog={(entry) => log({ weekNumber, entry })}
-      onNote={(entry) => note({ weekNumber, entry })}
-      onExport={() => copyWeek({ number: weekNumber })}
+      refresh='currentDay'
     />
   )
 }

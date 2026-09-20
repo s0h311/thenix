@@ -1,10 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Shelf } from '../components/Training/Shelf.tsx'
-import { WeekView } from '../components/Training/WeekView.tsx'
+import { TrainingWeek } from '../components/Training/TrainingWeek.tsx'
 import { today } from '../libs/Training/clock.ts'
-import { copyWeek } from '../libs/Training/export.ts'
-import { sendLog, sendNote } from '../libs/Training/log.ts'
 import type { Week, WeekOnShelf } from '../../shared/training.ts'
 
 /** Which Week is open lives in the URL, so a Week looked up is a Week that can be gone back to. */
@@ -50,7 +48,6 @@ async function openWeek(number: number): Promise<Week | null> {
 function ShelfPage() {
   const { number } = Route.useSearch()
   const navigate = Route.useNavigate()
-  const queryClient = useQueryClient()
 
   const shelf = useQuery({ queryKey: ['shelf', today()], queryFn: openShelf })
   const week = useQuery({
@@ -58,10 +55,6 @@ function ShelfPage() {
     queryFn: () => openWeek(number ?? 0),
     enabled: number !== undefined,
   })
-
-  const settle = { onSettled: () => queryClient.invalidateQueries({ queryKey: ['week'] }) }
-  const { mutate: log } = useMutation({ mutationFn: sendLog, ...settle })
-  const { mutate: note } = useMutation({ mutationFn: sendNote, ...settle })
 
   // Whether the athlete is signed in is answered once, by the shelf, so an opened
   // Week never reports "there is no Week 12" when what is missing is the session.
@@ -102,14 +95,12 @@ function ShelfPage() {
         {opened === null ? (
           <p>There is no Week {number}.</p>
         ) : (
-          <WeekView
+          <TrainingWeek
             week={opened}
             // The Week being trained opens on today; a past one holds no today, and
             // the screen then asks for a Day rather than guessing at one.
             day={opened.days.find((day) => day.date === today()) ?? null}
-            onLog={(entry) => log({ weekNumber: opened.number, entry })}
-            onNote={(entry) => note({ weekNumber: opened.number, entry })}
-            onExport={() => copyWeek({ number: opened.number })}
+            refresh='week'
           />
         )}
       </div>
