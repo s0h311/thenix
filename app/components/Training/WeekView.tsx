@@ -1,21 +1,19 @@
 import { useState } from 'react'
 import { CopyButton } from './CopyButton.tsx'
-import { logFor, noTaps, noteOf, tally, tapOf, withTap } from '../../libs/Training/logging.ts'
+import { Button } from '../UI/Button.tsx'
+import { Card } from '../UI/Card.tsx'
+import { Chip } from '../UI/Chip.tsx'
+import { TextArea } from '../UI/Field.tsx'
+import { RATINGS, asLogged, headingOf, progressOf } from '../../libs/Training/day.ts'
+import { logFor, noTaps, noteOf, tapOf, withTap } from '../../libs/Training/logging.ts'
 import { asDate, asLoad, asPrescribed, asRest } from '../../libs/Training/notation.ts'
 import { openOn } from '../../libs/Training/opening.ts'
 import { pillsOf } from '../../libs/Training/pills.ts'
 import type { Logged, Noted, Taps } from '../../libs/Training/logging.ts'
 import type { Picked } from '../../libs/Training/opening.ts'
 import type { Mark, Pill } from '../../libs/Training/pills.ts'
-import type { ChangeEvent, MouseEvent } from 'react'
+import type { ChangeEvent, MouseEvent, ReactNode } from 'react'
 import type { Day, Difficulty, Exercise, Log, Orphan, Week } from '../../../shared/training.ts'
-
-/** The three chips of ADR 0003, in the order the athlete reads them. */
-const RATINGS: { difficulty: Difficulty; label: string }[] = [
-  { difficulty: 'easy', label: 'Easy' },
-  { difficulty: 'good', label: 'Good' },
-  { difficulty: 'challenging', label: 'Challenging' },
-]
 
 /**
  * A Day's state on the strip, as a shape and as a word. Both, always: the fill
@@ -97,7 +95,7 @@ export function WeekView({
       />
 
       {open === null ? (
-        <p>This Week holds no Days.</p>
+        <p className='text-ink-muted'>This Week holds no Days.</p>
       ) : (
         <DayDetail
           day={open}
@@ -163,12 +161,14 @@ function DayDetail({
   return (
     <section className='space-y-4'>
       <header className='space-y-1'>
-        <p className='text-sm font-semibold'>
-          Day {day.ordinal} · {dated(day)}
+        <p className='text-label text-ink-muted'>
+          <span className='numerals'>
+            Day {day.ordinal} · {dated(day)}
+          </span>
           {day.ordinal === today?.ordinal ? ' · Today' : ''}
         </p>
         {/* The screen's heading is the Week; the Day under it is a level down. */}
-        <h2 className='text-title'>{day.focus ?? (day.kind === 'rest' ? 'Full Rest' : 'Training')}</h2>
+        <h2 className='text-title'>{headingOf(day)}</h2>
         <Progress
           day={day}
           taps={taps}
@@ -176,9 +176,11 @@ function DayDetail({
       </header>
 
       {day.kind === 'rest' ? (
-        <p>Rest Day — nothing is asked of you.</p>
+        <Card>
+          <p className='text-ink-muted'>Rest Day — nothing is asked of you.</p>
+        </Card>
       ) : (
-        <ul className='space-y-4'>
+        <ul className='space-y-3'>
           {day.exercises.map((exercise) => (
             <ExerciseItem
               // Keyed by Day too: one Movement recurs across Days under one key, and
@@ -206,23 +208,24 @@ function DayDetail({
 }
 
 /**
- * How much of the Day is left, and whether it is over. Nothing here is a button: a
- * Day finishes when the last Exercise it asks for is logged, or — for a rest Day,
- * which asks for none — when its date has passed, which the server already derived.
+ * How much of the Day is left, and whether it is over. Nothing here is a button, and
+ * the tick is a shape beside the words rather than instead of them — a finished Day
+ * reads as finished without colour.
  */
 function Progress({ day, taps }: { day: Day; taps: Taps }) {
-  const { done, asked, complete } = tally({ taps, day })
+  const progress = progressOf({ taps, day })
 
-  if (!complete && asked === 0) {
+  if (progress === null) {
     return null
   }
 
   return (
     <p
       aria-live='polite'
-      className='text-sm font-semibold'
+      className='numerals text-label font-semibold text-ink-muted'
     >
-      {complete ? <span>✓ Day done</span> : <span>{`${done} of ${asked} logged`}</span>}
+      {progress.complete ? <span aria-hidden='true'>✓ </span> : null}
+      {progress.said}
     </p>
   )
 }
@@ -230,7 +233,8 @@ function Progress({ day, taps }: { day: Day; taps: Taps }) {
 /**
  * Somewhere to put what belongs to the Day and not to any Exercise on it — "swapped
  * with day 4", "walked". It is on a rest Day too, which is the whole point: recording
- * a walk must never require inventing an Exercise to hang it off.
+ * a walk must never require inventing an Exercise to hang it off. Unlike an
+ * Exercise's, it is one box on the screen rather than seven, so it is never hidden.
  */
 function DayNote({
   dayOrdinal,
@@ -257,17 +261,16 @@ function DayNote({
   }
 
   return (
-    <div className='space-y-1'>
-      <textarea
-        aria-label={`Note on Day ${dayOrdinal}`}
+    <Card>
+      <TextArea
+        label={`Note on Day ${dayOrdinal}`}
         value={text}
         onChange={write}
         onBlur={keep}
         rows={2}
-        placeholder='Anything about the Day itself'
-        className='w-full rounded-md border border-legacy bg-white px-3 py-2 text-sm'
+        placeholder='A walk, a swap, anything about the Day itself'
       />
-    </div>
+    </Card>
   )
 }
 
@@ -283,18 +286,17 @@ function Orphans({ orphans }: { orphans: Orphan[] }) {
 
   return (
     <section className='space-y-2'>
-      <h2 className='text-sm font-semibold'>No longer in the plan</h2>
+      <h3 className='text-heading'>No longer in the plan</h3>
       <ul className='space-y-2'>
         {orphans.map((orphan) => (
-          <li
-            key={orphan.key}
-            className='space-y-1 rounded-md border border-legacy px-3 py-2'
-          >
-            <p className='flex flex-wrap items-baseline gap-2'>
-              <span className='font-semibold'>{named(orphan)}</span>
-              {orphan.variant === null ? null : <span className='text-sm'>{orphan.variant}</span>}
-            </p>
-            <p className='text-sm'>{asLogged(orphan.log)}</p>
+          <li key={orphan.key}>
+            <Card className='space-y-1'>
+              <p className='flex flex-wrap items-baseline gap-x-2 gap-y-1'>
+                <span className='font-semibold'>{named(orphan)}</span>
+                {orphan.variant === null ? null : <span className='text-label text-ink-muted'>{orphan.variant}</span>}
+              </p>
+              <p className='text-label text-ink-muted'>{asLogged(orphan.log)}</p>
+            </Card>
           </li>
         ))}
       </ul>
@@ -302,23 +304,11 @@ function Orphans({ orphans }: { orphans: Orphan[] }) {
   )
 }
 
-/** A Log in one line, for reading back rather than tapping. */
-function asLogged(entry: Log): string {
-  return [rated(entry), entry.note].filter((part) => part !== null && part !== '').join(' · ')
-}
-
-function rated(entry: Log): string | null {
-  if (entry.kind === 'skipped') {
-    return 'Skipped'
-  }
-
-  if (entry.kind === 'difficulty') {
-    return RATINGS.find((one) => one.difficulty === entry.difficulty)?.label ?? null
-  }
-
-  return null
-}
-
+/**
+ * One Exercise, on a raised card, with everything the coach asked for in plain
+ * sight. Nothing here is behind a tap: this is what is read between sets, with the
+ * phone on the floor, and a disclosure would cost a tap every time.
+ */
 function ExerciseItem({
   exercise,
   dayOrdinal,
@@ -331,37 +321,51 @@ function ExerciseItem({
   onLog: (entry: Logged) => void
 }) {
   return (
-    <li className='space-y-1 rounded-md bg-legacy-surface px-3 py-2'>
-      <p className='flex flex-wrap items-baseline gap-2'>
-        <span className='font-semibold'>{exercise.name}</span>
-        {exercise.variant === null ? null : <span className='text-sm'>{exercise.variant}</span>}
-        {exercise.side === 'left' || exercise.side === 'right' ? (
-          <span className='text-sm font-semibold uppercase'>{exercise.side}</span>
-        ) : null}
-        {exercise.optional ? <span className='text-sm font-semibold'>Optional</span> : null}
-      </p>
+    <li>
+      <Card className='space-y-3'>
+        <div className='space-y-1.5'>
+          <p className='flex flex-wrap items-baseline gap-x-2 gap-y-1'>
+            <span className='text-heading'>{exercise.name}</span>
+            {exercise.variant === null ? null : <span className='text-label text-ink-muted'>{exercise.variant}</span>}
+            {exercise.side === 'left' || exercise.side === 'right' ? <Marker>{exercise.side}</Marker> : null}
+            {exercise.optional ? <Marker>Optional</Marker> : null}
+          </p>
 
-      <p className='flex flex-wrap items-baseline gap-2 font-mono text-sm'>
-        <span className='text-base font-semibold'>
-          {asPrescribed({ prescription: exercise.prescription, side: exercise.side })}
-        </span>
-        {exercise.load === null ? null : <span>{asLoad(exercise.load)}</span>}
-        {exercise.tempo === null ? null : <span>{exercise.tempo}</span>}
-        {exercise.restSeconds === null ? null : <span>{asRest(exercise.restSeconds)}</span>}
-      </p>
+          {/* Tabular numerals: the Prescriptions line up down a Day, so it scans. */}
+          <p className='numerals flex flex-wrap items-baseline gap-x-3 gap-y-1'>
+            <span className='font-semibold'>
+              {asPrescribed({ prescription: exercise.prescription, side: exercise.side })}
+            </span>
+            {exercise.load === null ? null : <span className='text-label text-ink-muted'>{asLoad(exercise.load)}</span>}
+            {exercise.tempo === null ? null : <span className='text-label text-ink-muted'>{exercise.tempo}</span>}
+            {exercise.restSeconds === null ? null : (
+              <span className='text-label text-ink-muted'>{asRest(exercise.restSeconds)}</span>
+            )}
+          </p>
 
-      {exercise.cue === null ? null : <p className='text-sm'>{exercise.cue}</p>}
+          {exercise.cue === null ? null : <p className='text-label text-ink-muted'>{exercise.cue}</p>}
 
-      {/* Raw is always shown: where the parse was partial, this line is the prescription. */}
-      <p className='text-sm text-legacy/70'>{exercise.raw}</p>
+          {/* Raw is always shown: where the parse was partial, this line is the prescription. */}
+          <p className='text-caption text-ink-faint'>{exercise.raw}</p>
+        </div>
 
-      <LogControls
-        exercise={exercise}
-        dayOrdinal={dayOrdinal}
-        log={log}
-        onLog={onLog}
-      />
+        <LogControls
+          exercise={exercise}
+          dayOrdinal={dayOrdinal}
+          log={log}
+          onLog={onLog}
+        />
+      </Card>
     </li>
+  )
+}
+
+/** A word the Exercise carries — which limb, or that it is only offered. */
+function Marker({ children }: { children: ReactNode }) {
+  return (
+    <span className='rounded-full border border-hairline px-2 py-0.5 text-caption font-semibold uppercase text-ink-muted'>
+      {children}
+    </span>
   )
 }
 
@@ -369,6 +373,9 @@ function ExerciseItem({
  * The whole of logging: three ratings, a skip, and somewhere to write. There is no
  * save button — the tap is the save, because the phone is on the floor mid-set and
  * nothing may be lost by walking away. Numbers are deliberately absent (ADR 0003).
+ *
+ * The chips stay in plain sight; only the note folds away, because seven Exercises
+ * of empty text boxes is a wall, and one tap to log must not become two.
  */
 function LogControls({
   exercise,
@@ -414,13 +421,13 @@ function LogControls({
   }
 
   return (
-    <div className='space-y-2 pt-1'>
+    <div className='space-y-2'>
       <fieldset
         aria-label={`How ${named(exercise)} went`}
         className='flex flex-wrap gap-2'
       >
         {RATINGS.map((rating) => (
-          <Chip
+          <Rating
             key={rating.difficulty}
             label={rating.label}
             name={`${rating.label} — ${named(exercise)}`}
@@ -429,7 +436,7 @@ function LogControls({
             onChoose={rate}
           />
         ))}
-        <Chip
+        <Rating
           label='Skipped'
           name={`Skipped — ${named(exercise)}`}
           value='skipped'
@@ -438,14 +445,11 @@ function LogControls({
         />
       </fieldset>
 
-      <textarea
-        aria-label={`Note on ${named(exercise)}`}
-        value={note}
-        onChange={write}
-        onBlur={keep}
-        rows={2}
-        placeholder='Anything worth telling the coach'
-        className='w-full rounded-md border border-legacy bg-white px-3 py-2 text-sm'
+      <NoteBox
+        on={named(exercise)}
+        note={note}
+        onWrite={write}
+        onKeep={keep}
       />
     </div>
   )
@@ -453,9 +457,9 @@ function LogControls({
 
 /**
  * A tap target, not a toggle: the chosen one carries a tick as well as the fill, so
- * it reads without colour. Both pairs are the brand pairs already proven WCAG AA.
+ * it reads without colour.
  */
-function Chip({
+function Rating({
   label,
   name,
   value,
@@ -469,17 +473,63 @@ function Chip({
   onChoose: (event: MouseEvent<HTMLButtonElement>) => void
 }) {
   return (
-    <button
-      type='button'
+    <Chip
       value={value}
       aria-label={name}
-      aria-pressed={chosen}
+      selected={chosen}
       onClick={onChoose}
-      className='rounded-md border border-legacy bg-white px-4 py-3 text-sm text-legacy aria-pressed:bg-legacy aria-pressed:font-semibold aria-pressed:text-white'
     >
-      {chosen ? <span aria-hidden='true'>✓ </span> : null}
+      {chosen ? <span aria-hidden='true'>✓</span> : null}
       {label}
-    </button>
+    </Chip>
+  )
+}
+
+/**
+ * What the athlete wants to tell the coach about one Exercise, folded away until it
+ * is wanted — and never folded away once there is something in it, because what was
+ * recorded is never hidden from the athlete who recorded it.
+ */
+function NoteBox({
+  on,
+  note,
+  onWrite,
+  onKeep,
+}: {
+  on: string
+  note: string
+  onWrite: (event: ChangeEvent<HTMLTextAreaElement>) => void
+  onKeep: () => void
+}) {
+  const [shown, setShown] = useState(note !== '')
+
+  function toggle() {
+    setShown(!shown)
+  }
+
+  return (
+    <div className='space-y-2'>
+      <Button
+        tone='ghost'
+        onClick={toggle}
+        aria-expanded={shown}
+        aria-label={`${shown ? 'Hide the' : 'Add a'} note on ${on}`}
+        className='px-0'
+      >
+        <span aria-hidden='true'>{shown ? 'Hide note' : 'Add a note'}</span>
+      </Button>
+      {shown ? (
+        <textarea
+          aria-label={`Note on ${on}`}
+          value={note}
+          onChange={onWrite}
+          onBlur={onKeep}
+          rows={2}
+          placeholder='Anything worth telling the coach'
+          className='w-full rounded-lg border border-hairline bg-sunken px-3 py-2.5 text-label text-ink placeholder:text-ink-faint focus-visible:border-transparent focus-visible:outline-2 focus-visible:outline-brand'
+        />
+      ) : null}
+    </div>
   )
 }
 
@@ -501,15 +551,18 @@ function WeekNotes({ notes }: { notes: string | null }) {
 
   return (
     <section className='space-y-2'>
-      <button
-        type='button'
+      <Button
         onClick={toggle}
         aria-expanded={shown}
-        className='w-full rounded-md bg-legacy px-3 py-2 font-semibold text-white'
+        className='w-full'
       >
         {shown ? 'Hide Week notes' : 'Week notes'}
-      </button>
-      {shown ? <p className='whitespace-pre-wrap text-sm'>{notes}</p> : null}
+      </Button>
+      {shown ? (
+        <Card>
+          <p className='whitespace-pre-wrap text-label'>{notes}</p>
+        </Card>
+      ) : null}
     </section>
   )
 }

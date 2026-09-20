@@ -1,36 +1,20 @@
 import { today } from './clock.ts'
 import type { Save } from './saving.ts'
 
-/** Just enough of `fetch` to post one Save and hear whether it landed. */
-type Sender = (
-  url: string,
-  init: { method: string; headers: Record<string, string>; body: string },
-) => Promise<{
-  ok: boolean
-}>
-
 /**
  * Sends one tap on its way. The screen has already moved on — this only persists it,
  * and throws when it did not, because a Log the server never got is one the athlete
  * has to be told about rather than one the screen keeps showing as recorded.
  */
-export async function sendSave({
-  weekNumber,
-  save,
-  on = today(),
-  using = fetch,
-}: {
-  weekNumber: number
-  save: Save
-  on?: string
-  using?: Sender
-}): Promise<void> {
+export async function sendSave({ weekNumber, save }: { weekNumber: number; save: Save }): Promise<void> {
   const action = save.kind === 'log' ? 'logExercise' : 'logDay'
 
-  const response = await using(`/api/actions/${action}`, {
+  const response = await fetch(`/api/actions/${action}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ weekNumber, today: on, ...save.entry }),
+    // The athlete's own date, read at the moment of the tap: the training happened
+    // where the athlete is standing, and a session can cross local midnight.
+    body: JSON.stringify({ weekNumber, today: today(), ...save.entry }),
   })
 
   if (!response.ok) {
