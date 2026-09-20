@@ -724,6 +724,72 @@ describe('a Week the coach got wrong', () => {
     ])
   })
 
+  test('two Days sharing an ordinal is an error, and neither Day is written', async () => {
+    const { training, athlete } = await openApp()
+
+    const result = await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days[4].ordinal = 1
+      }),
+      startDate: '2025-08-25',
+    })
+
+    expect(result.ok).toBe(false)
+    expect(await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS })).toBeNull()
+  })
+
+  test('the error names the Day the coach wrote twice', async () => {
+    const { training, athlete } = await openApp()
+
+    const result = await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days[4].ordinal = 1
+      }),
+      startDate: '2025-08-25',
+    })
+
+    expect(result.ok ? [] : result.errors).toEqual([
+      { day: 1, exercise: null, field: 'ordinal', message: expect.any(String) },
+    ])
+  })
+
+  test('a revision that writes one Day twice leaves the Day it would overwrite, Logs and all', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'challenging', note: 'ROM held' },
+    })
+
+    await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days[4].ordinal = 1
+      }),
+      startDate: '2025-08-25',
+    })
+
+    const week = await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS })
+
+    expect(dayIn(week, 1).exercises.map((one) => one.key)).toContain('dips')
+    expect(dayIn(week, 1).orphans).toEqual([])
+    expect(exerciseIn(week, { ordinal: 1, key: 'dips' }).log).toEqual({
+      kind: 'difficulty',
+      difficulty: 'challenging',
+      note: 'ROM held',
+    })
+  })
+
   test('a fault outside any Day names the Week itself', async () => {
     const { training, athlete } = await openApp()
 

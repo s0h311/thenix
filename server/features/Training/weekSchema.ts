@@ -105,11 +105,30 @@ const daySchema = z
   })
 
 /** `startDate` is deliberately absent — the coach does not know it, the user picks it at import. */
-export const weekSchema = z.object({
-  number: z.int(),
-  notes: z.string().nullish(),
-  days: z.array(daySchema),
-})
+export const weekSchema = z
+  .object({
+    number: z.int(),
+    notes: z.string().nullish(),
+    days: z.array(daySchema),
+  })
+  // A Day is its ordinal — it is where the Logs hang and what its date is derived
+  // from — so a Week that writes one twice has two plans for the same day and no
+  // way to say which won. The coach has to renumber.
+  .superRefine((week, context) => {
+    const seen = new Set<number>()
+
+    for (const [index, one] of week.days.entries()) {
+      if (seen.has(one.ordinal)) {
+        context.addIssue({
+          code: 'custom',
+          message: `This Week has two Day ${one.ordinal}s.`,
+          path: ['days', index, 'ordinal'],
+        })
+      }
+
+      seen.add(one.ordinal)
+    }
+  })
 
 export type ImportedExercise = z.infer<typeof exerciseSchema>
 export type ImportedDay = z.infer<typeof daySchema>
