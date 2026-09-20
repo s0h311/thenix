@@ -442,3 +442,63 @@ describe('the start date the user picks at import', () => {
     ])
   })
 })
+
+describe('opening the app on a training day', () => {
+  test('today’s Day of the current Week is what the app opens on', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const current = await training.getCurrentDay({ userId: athlete, today: '2025-08-27' })
+
+    expect(current?.week.number).toBe(20)
+    expect(current?.day?.ordinal).toBe(3)
+    expect(current?.day?.focus).toBe('Lower Body')
+  })
+
+  test('the Week being trained is the one today falls inside, not the one before it', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 15, startDate: '2025-07-31' })
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const current = await training.getCurrentDay({ userId: athlete, today: '2025-08-31' })
+
+    expect(current?.week.number).toBe(20)
+    expect(current?.day?.ordinal).toBe(7)
+  })
+
+  test('a Week that has run out is no longer opened on', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    expect(await training.getCurrentDay({ userId: athlete, today: '2025-09-01' })).toBeNull()
+  })
+
+  test('a Week the coach cut short still opens, with nothing asked of the missing Day', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 9, startDate: '2025-06-05' })
+
+    const current = await training.getCurrentDay({ userId: athlete, today: '2025-06-06' })
+
+    expect(current?.week.number).toBe(9)
+    expect(current?.day).toBeNull()
+  })
+
+  test('an athlete with no Weeks has nothing to open on', async () => {
+    const { training, athlete } = await openApp()
+
+    expect(await training.getCurrentDay({ userId: athlete, today: '2025-08-27' })).toBeNull()
+  })
+
+  test('another athlete’s Week is never what the app opens on', async () => {
+    const { training, athlete, database } = await openApp()
+    const other = await signUp({ database, email: 'other@example.com' })
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    expect(await training.getCurrentDay({ userId: other, today: '2025-08-27' })).toBeNull()
+  })
+})

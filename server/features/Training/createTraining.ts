@@ -1,9 +1,9 @@
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray, max } from 'drizzle-orm'
 import { day, exercise, movement, week } from '../../infrastructure/Database/schemas/public.ts'
 import { dateOfDay } from './dayDate.ts'
 import { parseWeek } from './parseWeek.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
-import type { Day, Exercise, ImportResult, Week } from './types.ts'
+import type { CurrentDay, Day, Exercise, ImportResult, Week } from './types.ts'
 import type { ImportedWeek } from './weekSchema.ts'
 
 type Dependencies = {
@@ -54,6 +54,33 @@ export function createTraining({ database }: Dependencies) {
         exercises: exerciseRows.filter((row) => row.dayId === dayRow.id).map(toExercise),
       })),
     }
+  }
+
+  /**
+   * The Week today falls inside. A Week runs from its start date to its last Day,
+   * so a Week the coach cut short ends early rather than always filling seven days.
+   */
+  async function currentWeek({ userId, today }: { userId: string; today: string }): Promise<number | null> {
+    const rows = await database
+      .select({ number: week.number, startDate: week.startDate, lastOrdinal: max(day.ordinal) })
+      .from(week)
+      .leftJoin(day, eq(day.weekId, week.id))
+      .where(eq(week.userId, userId))
+      .groupBy(week.id)
+
+    const running = rows.filter((row) => {
+      if (row.lastOrdinal === null) {
+        return false
+      }
+
+      const lastDate = dateOfDay({ startDate: row.startDate, ordinal: row.lastOrdinal }).date
+
+      return row.startDate <= today && today <= lastDate
+    })
+
+    // Weeks should not overlap, but a re-dated import can make them: the one that
+    // started most recently is the one being trained.
+    return running.toSorted((one, other) => other.startDate.localeCompare(one.startDate))[0]?.number ?? null
   }
 
   async function writeWeek({
@@ -164,6 +191,23 @@ export function createTraining({ database }: Dependencies) {
     },
 
     getWeek: readWeek,
+
+    /** What the app opens on: today's Day, and the Week it sits in. */
+    async getCurrentDay({ userId, today }: { userId: string; today: string }): Promise<CurrentDay | null> {
+      const number = await currentWeek({ userId, today })
+
+      if (number === null) {
+        return null
+      }
+
+      const found = await readWeek({ userId, number })
+
+      if (found === null) {
+        return null
+      }
+
+      return { week: found, day: found.days.find((one) => one.date === today) ?? null }
+    },
   }
 }
 

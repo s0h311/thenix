@@ -1,10 +1,9 @@
 import { throwError } from '../../infrastructure/Utils/logging.ts'
+import type { Weekday } from '../../../shared/training.ts'
 
 const FEATURE = 'features/Training dayDate'
 
-const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
-
-export type Weekday = (typeof WEEKDAYS)[number]
+const WEEKDAYS: Weekday[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
 /**
  * A Day carries an ordinal, never a date. Its place in the calendar is always

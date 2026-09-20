@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { Prescription } from '../../../shared/training.ts'
 
 /**
  * The contract between the coach and the app. It is internal to the Training
@@ -36,13 +37,6 @@ const loadSchema = z.discriminatedUnion('kind', [
 const repsSchema = z.object({ kind: z.literal('reps'), sets: z.int(), reps: rangeSchema.nullable() })
 const timeSchema = z.object({ kind: z.literal('time'), sets: z.int(), seconds: rangeSchema.nullable() })
 const distanceSchema = z.object({ kind: z.literal('distance'), km: rangeSchema, pace: z.string().nullish() })
-
-/** `reps` and `seconds` are null only when the Exercise is to failure: "Dead hang: 3× max". */
-export type Prescription =
-  | z.infer<typeof repsSchema>
-  | z.infer<typeof timeSchema>
-  | z.infer<typeof distanceSchema>
-  | { kind: 'rounds'; rounds: number; work: Prescription; recovery: Prescription | null }
 
 const prescriptionSchema: z.ZodType<Prescription> = z.lazy(() =>
   z.discriminatedUnion('kind', [
@@ -110,9 +104,6 @@ export const weekSchema = z.object({
   days: z.array(daySchema),
 })
 
-export type Load = z.infer<typeof loadSchema>
-export type Range = z.infer<typeof rangeSchema>
-export type Side = z.infer<typeof exerciseSchema>['side']
 export type ImportedExercise = z.infer<typeof exerciseSchema>
 export type ImportedDay = z.infer<typeof daySchema>
 export type ImportedWeek = z.infer<typeof weekSchema>
