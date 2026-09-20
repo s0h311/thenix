@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { CopyButton } from '../components/Training/CopyButton.tsx'
 import { Faults } from '../components/Training/Faults.tsx'
@@ -11,7 +11,7 @@ import { Caution } from '../components/UI/Caution.tsx'
 import { TextArea } from '../components/UI/Field.tsx'
 import { today } from '../libs/Training/clock.ts'
 import { copyRegistry, copySchema, copyWeek } from '../libs/Training/export.ts'
-import { answerOf } from '../libs/Training/importing.ts'
+import { answerOf, wrote } from '../libs/Training/importing.ts'
 import { openShelf, shelfKey } from '../libs/Training/shelf.ts'
 import type { ImportFault, Revision, WeekPreview } from '../../shared/training.ts'
 
@@ -102,8 +102,16 @@ function CoachPage() {
   )
 }
 
+/**
+ * Every read the app makes about Weeks, by the head of its key. An import does not
+ * add a Week so much as rewrite the plan, so one landing makes all of them old at
+ * once — and the Shelf is read on this very screen, one section down.
+ */
+const WEEK_READS = ['shelf', 'currentDay', 'week']
+
 /** One direction: a Week arriving as JSON, read back before anything is written. */
 function FromYourCoach() {
+  const queryClient = useQueryClient()
   const [json, setJson] = useState('')
   const [working, setWorking] = useState(false)
   const [stage, setStage] = useState<Stage>({ at: 'pasting' })
@@ -134,6 +142,14 @@ function FromYourCoach() {
     setWorking(true)
 
     const answer = answerOf<Imported>(await post('/api/actions/importWeek', { json, startDate, today: today() }))
+
+    // Nothing did this, so the Week the athlete had just imported was not there:
+    // "To your coach" is a section of this same screen and went on saying there was
+    // nothing to send yet. Only an import, and only one that may have been written —
+    // a read that fails in a gym is no reason to go asking again.
+    if (wrote(answer.at)) {
+      WEEK_READS.forEach((read) => void queryClient.invalidateQueries({ queryKey: [read] }))
+    }
 
     setStage(
       answer.at === 'read'

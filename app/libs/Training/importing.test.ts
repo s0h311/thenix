@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { answerOf } from './importing.ts'
+import { answerOf, wrote } from './importing.ts'
 
 const FAULT = { day: 1, exercise: 'dips', field: 'raw', message: 'could not be read' }
 
@@ -48,5 +48,23 @@ describe('a paste the server never answered', () => {
 
   test('an answer that is not the contract is not an answer', () => {
     expect(answerOf({ status: 200, body: 'Bad Gateway' })).toEqual({ at: 'unreachable' })
+  })
+})
+
+describe('what an import may have written', () => {
+  test('a Week read back is a Week on the Shelf, so every read of one is old', () => {
+    expect(wrote('read')).toBe(true)
+  })
+
+  test('an answer that never came back may still have been written, so it is read again', () => {
+    expect(wrote('unreachable')).toBe(true)
+  })
+
+  test('a paste refused wrote nothing: the Shelf is untouched', () => {
+    expect(wrote('rejected')).toBe(false)
+  })
+
+  test('an ended session wrote nothing either', () => {
+    expect(wrote('signedOut')).toBe(false)
   })
 })

@@ -52,3 +52,23 @@ export function answerOf<T>({ status, body }: { status: number | null; body: unk
     ? { at: 'rejected', faults: answered.errors as ImportFault[] }
     : { at: 'unreachable' }
 }
+
+/** One of the four answers, as the word alone. */
+export type At = Answer<unknown>['at']
+
+/**
+ * Whether the paste may have reached the Shelf. Asked only of an import: a Preview
+ * writes nothing, whatever it answers.
+ *
+ * `read` is the Week written. `unreachable` is the answer that is not "nothing
+ * happened" — the import may have been written and the answer lost on the way back,
+ * which is why the athlete is sent to look at their Weeks rather than told either
+ * way. Both leave everything the app is holding about Weeks a Week out of date: the
+ * Shelf's marks, today's Day, and the plan of any Week open behind this screen,
+ * which a Revision has just replaced.
+ *
+ * A refusal and an ended session wrote nothing, and the Shelf is untouched.
+ */
+export function wrote(at: At): boolean {
+  return at === 'read' || at === 'unreachable'
+}
