@@ -82,7 +82,9 @@ _Avoid_: Progress, result, history
 
 **Orphan**:
 A Log whose Exercise a later revision of the Week dropped. The plan moved on and the
-work did not, so the Log is kept and shown under its Day rather than deleted.
+work did not, so the Log is kept and shown under its Day rather than deleted. A Day the
+revision drops whole is kept the same way when anything was recorded on it — the Day is
+still where its orphans belong — and goes only when nothing was.
 _Avoid_: Stale, deleted, removed
 
 **Progression**:

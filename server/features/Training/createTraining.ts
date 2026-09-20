@@ -186,14 +186,40 @@ export function createTraining({ database }: Dependencies) {
       // Days by ordinal and Exercises by key, which is what lets a Log outlive the
       // plan it was written against.
       const ordinals = imported.days.map((one) => one.ordinal)
+      const outOfWeek =
+        ordinals.length === 0
+          ? eq(day.weekId, weekRow.id)
+          : and(eq(day.weekId, weekRow.id), notInArray(day.ordinal, ordinals))
 
-      await transaction
-        .delete(day)
-        .where(
-          ordinals.length === 0
-            ? eq(day.weekId, weekRow.id)
-            : and(eq(day.weekId, weekRow.id), notInArray(day.ordinal, ordinals)),
-        )
+      // A whole Day the revision no longer asks for is treated as its Exercises are:
+      // it goes, unless something was recorded on it. A Day that was trained outlives
+      // the plan that asked for it, carrying its Logs as orphans.
+      const withdrawn = (await transaction.select({ id: day.id }).from(day).where(outOfWeek)).map((row) => row.id)
+
+      if (withdrawn.length > 0) {
+        await transaction
+          .delete(exercise)
+          .where(
+            and(
+              inArray(exercise.dayId, withdrawn),
+              notExists(transaction.select().from(log).where(eq(log.exerciseId, exercise.id))),
+            ),
+          )
+
+        await transaction.update(exercise).set({ dropped: true }).where(inArray(exercise.dayId, withdrawn))
+
+        // Nothing logged and nothing left to log: the Day was never trained, so the
+        // revision takes it away entirely.
+        await transaction
+          .delete(day)
+          .where(
+            and(
+              inArray(day.id, withdrawn),
+              notExists(transaction.select().from(exercise).where(eq(exercise.dayId, day.id))),
+              notExists(transaction.select().from(dayLog).where(eq(dayLog.dayId, day.id))),
+            ),
+          )
+      }
 
       for (const importedDay of imported.days) {
         const revisedDay = {
