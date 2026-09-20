@@ -113,9 +113,12 @@ _Avoid_: Draft, dry run, staging
 **Revision**:
 An Import of a Week number already on the shelf. It replaces the plan and keeps the
 Logs, so it is not a new Week and never moves one: the dates it is already trained on
-are the dates it keeps, and the Preview says what is being replaced and how much is
-recorded against it before the athlete confirms. A Day or Exercise a Revision no
-longer asks for becomes an Orphan rather than a deletion.
+are the dates it keeps, and the Preview says what is being replaced, how much is
+recorded against it, and — because the date stays editable, for the Week imported on
+the wrong day — how far a re-dating would move it and that the Logs move with it.
+Confirming a Revision says "Replace", never "Import": the athlete is overwriting a
+Week they may be halfway through. A Day or Exercise a Revision no longer asks for
+becomes an Orphan rather than a deletion.
 _Avoid_: Update, re-import as a second Week, correction
 
 **Export**:

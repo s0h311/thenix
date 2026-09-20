@@ -105,6 +105,60 @@ export function asRevision({ number, revising }: { number: number; revising: Rev
   return `${shelf}, with ${logs} on it. Importing replaces the plan and keeps your Logs.`
 }
 
+/**
+ * What confirming does, in the words of the button that does it. A Revision is not
+ * an import: it replaces a Week the athlete may be halfway through, and the last
+ * thing read before the tap should say so rather than say "Import this Week".
+ */
+export function asImport({ number, revising }: { number: number; revising: Revision | null }): string {
+  return revising === null ? 'Import this Week' : `Replace Week ${number}`
+}
+
+/**
+ * What moving a Revision's start date costs, said before it is confirmed. The date
+ * field is the escape hatch for a Week imported on the wrong day, so it stays
+ * editable — but a Day's date is derived from the Week's start, so re-dating a Week
+ * that is already being trained takes every Log on it along. Null when nothing moves.
+ */
+export function asMoved({
+  number,
+  revising,
+  startsOn,
+}: {
+  number: number
+  revising: Revision | null
+  startsOn: string
+}): string | null {
+  if (revising === null || startsOn === revising.startDate) {
+    return null
+  }
+
+  const by = daysBetween({ from: revising.startDate, to: startsOn })
+  const moves = `This moves Week ${number} ${by < 0 ? 'back' : 'forward'} ${counted({
+    of: Math.abs(by),
+    one: 'day',
+  })}, to ${asDate(startsOn)}.`
+
+  if (revising.logged === 0) {
+    return moves
+  }
+
+  const logs = counted({ of: revising.logged, one: 'Log' })
+
+  return `${moves} Its ${logs} ${revising.logged === 1 ? 'moves' : 'move'} with it.`
+}
+
+/** Both are ISO dates read at midnight UTC, so the difference is whole days. */
+function daysBetween({ from, to }: { from: string; to: string }): number {
+  const A_DAY = 24 * 60 * 60 * 1000
+
+  return (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / A_DAY
+}
+
+function counted({ of, one }: { of: number; one: string }): string {
+  return of === 1 ? `1 ${one}` : `${of} ${one}s`
+}
+
 function withImplement({ written, implement }: { written: string; implement?: string | null }): string {
   return implement === null || implement === undefined ? written : `${written} (${implement})`
 }

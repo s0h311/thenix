@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { asRevision } from '../../libs/Training/notation.ts'
+import { asImport, asMoved, asRevision } from '../../libs/Training/notation.ts'
 import type { Revision, WeekPreview } from '../../../shared/training.ts'
 
 /**
@@ -24,6 +24,10 @@ export function Preview({
   onBack: () => void
 }) {
   const [startsOn, setStartsOn] = useState(startDate)
+  // The date field is the escape hatch for a Week imported on the wrong day, so it
+  // stays editable on a Revision too — but a Day's date is derived from the Week's
+  // start, so moving one already being trained moves its Logs. That is said, not blocked.
+  const moving = asMoved({ number: preview.number, revising, startsOn })
 
   return (
     <section className='space-y-4'>
@@ -66,12 +70,20 @@ export function Preview({
           className='rounded-md bg-brand-surface px-3 py-2 font-normal text-brand'
         />
       </label>
+      {moving === null ? null : (
+        <p
+          aria-live='polite'
+          className='rounded-md border border-brand px-3 py-2 font-semibold text-brand'
+        >
+          {moving}
+        </p>
+      )}
       <button
         type='button'
         onClick={() => onConfirm(startsOn)}
         className='w-full rounded-md bg-brand px-3 py-2 font-semibold text-white'
       >
-        Import this Week
+        {asImport({ number: preview.number, revising })}
       </button>
       <button
         type='button'

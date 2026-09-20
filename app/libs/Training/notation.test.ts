@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import { asDate, asLoad, asPrescribed, asRest, asRevision, asSpan } from './notation.ts'
-import type { Prescription, Side } from '../../../shared/training.ts'
+import { asDate, asImport, asLoad, asMoved, asPrescribed, asRest, asRevision, asSpan } from './notation.ts'
+import type { Prescription, Revision, Side } from '../../../shared/training.ts'
 
 /** The coach's own notation, as the Week prose writes it. */
 function written({ prescription, side = 'both' }: { prescription: Prescription; side?: Side }): string {
@@ -130,5 +130,54 @@ describe('a Week the paste would revise', () => {
     expect(asRevision({ number: 12, revising: { startDate: '2025-06-23', logged: 0 } })).toBe(
       'Week 12 is already on your shelf, from 23 Jun. Importing replaces its plan.',
     )
+  })
+})
+
+describe('the button that confirms a paste', () => {
+  test('a Week number the athlete does not have is imported', () => {
+    expect(asImport({ number: 21, revising: null })).toBe('Import this Week')
+  })
+
+  test('a Week number already on the shelf is replaced, and the button says which', () => {
+    expect(asImport({ number: 12, revising: { startDate: '2025-06-23', logged: 4 } })).toBe('Replace Week 12')
+  })
+})
+
+/** Every Day's date is derived from the Week's start, so moving the Week moves the Logs. */
+function moved({ revising, startsOn }: { revising: Revision | null; startsOn: string }): string | null {
+  return asMoved({ number: 12, revising, startsOn })
+}
+
+describe('re-dating a Week the athlete is already training', () => {
+  test('a Week pushed on a week says how far it goes and that the Logs go with it', () => {
+    expect(moved({ revising: { startDate: '2025-06-23', logged: 4 }, startsOn: '2025-06-30' })).toBe(
+      'This moves Week 12 forward 7 days, to 30 Jun. Its 4 Logs move with it.',
+    )
+  })
+
+  test('a Week pulled back reads as back, not as a negative number of days', () => {
+    expect(moved({ revising: { startDate: '2025-06-23', logged: 2 }, startsOn: '2025-06-21' })).toBe(
+      'This moves Week 12 back 2 days, to 21 Jun. Its 2 Logs move with it.',
+    )
+  })
+
+  test('a Week out by a single day is out by a day, not by 1 days', () => {
+    expect(moved({ revising: { startDate: '2025-06-23', logged: 1 }, startsOn: '2025-06-24' })).toBe(
+      'This moves Week 12 forward 1 day, to 24 Jun. Its 1 Log moves with it.',
+    )
+  })
+
+  test('a Week nothing is recorded against still moves, and promises nothing about Logs', () => {
+    expect(moved({ revising: { startDate: '2025-06-23', logged: 0 }, startsOn: '2025-06-30' })).toBe(
+      'This moves Week 12 forward 7 days, to 30 Jun.',
+    )
+  })
+
+  test('the date the Week already runs on moves nothing, so nothing is said', () => {
+    expect(moved({ revising: { startDate: '2025-06-23', logged: 4 }, startsOn: '2025-06-23' })).toBeNull()
+  })
+
+  test('a Week number the athlete does not have has nothing to move', () => {
+    expect(moved({ revising: null, startsOn: '2025-06-30' })).toBeNull()
   })
 })

@@ -108,6 +108,28 @@ describe('the Week before it is imported', () => {
     expect(confirmed).toEqual(['2025-09-08'])
   })
 
+  test('a Revision is confirmed by a button that says it replaces, not that it imports', async () => {
+    const screen = openPreview({ revising: { startDate: '2025-08-25', logged: 4 }, startDate: '2025-08-25' })
+
+    await expect.element(screen.getByRole('button', { name: 'Replace Week 21' })).toBeVisible()
+  })
+
+  test('re-dating a Revision says how far the Week moves and that its Logs go with it', async () => {
+    const screen = openPreview({ revising: { startDate: '2025-08-25', logged: 4 }, startDate: '2025-08-25' })
+
+    await screen.getByLabelText(/Starts on/).fill('2025-09-01')
+
+    await expect
+      .element(screen.getByText(/moves Week 21 forward 7 days, to 1 Sep. Its 4 Logs move with it/))
+      .toBeVisible()
+  })
+
+  test('a Revision left on the date it already runs on warns about nothing', async () => {
+    const screen = openPreview({ revising: { startDate: '2025-08-25', logged: 4 }, startDate: '2025-08-25' })
+
+    expect(screen.getByText(/moves Week 21/).elements()).toEqual([])
+  })
+
   test('going back to the paste imports nothing', async () => {
     const confirmed: string[] = []
     let back = 0
