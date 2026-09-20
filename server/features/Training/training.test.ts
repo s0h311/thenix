@@ -332,6 +332,37 @@ describe('importing the same Week number twice', () => {
     })
   })
 
+  test('a Log on an Exercise the revision keeps survives it untouched', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'challenging', note: 'ROM held' },
+    })
+
+    await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days[0].exercises[0].prescription.sets = 5
+      }),
+      startDate: '2025-08-25',
+    })
+
+    const week = await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS })
+
+    expect(exerciseIn(week, { ordinal: 1, key: 'dips' }).log).toEqual({
+      kind: 'difficulty',
+      difficulty: 'challenging',
+      note: 'ROM held',
+    })
+  })
+
   test('an Exercise the coach dropped is gone from the revised Week', async () => {
     const { training, athlete } = await openApp()
 
@@ -349,6 +380,154 @@ describe('importing the same Week number twice', () => {
     const week = await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS })
 
     expect(week?.days[0]?.exercises.map((one) => one.key)).not.toContain('dips')
+  })
+
+  test('a Log whose Exercise the coach dropped is kept, as an orphan under its Day', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'difficulty', difficulty: 'good', note: 'did them anyway' },
+    })
+
+    await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
+      }),
+      startDate: '2025-08-25',
+    })
+
+    const day = dayIn(await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS }), 1)
+
+    expect(day.exercises.map((one) => one.key)).not.toContain('dips')
+    expect(day.orphans.map((one) => [one.name, one.log])).toEqual([
+      ['Dips', { kind: 'difficulty', difficulty: 'good', note: 'did them anyway' }],
+    ])
+  })
+
+  test('an Exercise the coach dropped and never logged leaves no orphan behind', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
+      }),
+      startDate: '2025-08-25',
+    })
+
+    expect(dayIn(await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS }), 1).orphans).toEqual([])
+  })
+
+  test('an orphan rejoins the plan, Log and all, when the coach puts the Exercise back', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'skipped', note: 'shoulder' },
+    })
+
+    const without = coachJsonWith(20, (week) => {
+      week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
+    })
+
+    await training.importWeek({ userId: athlete, today: AFTERWARDS, json: without, startDate: '2025-08-25' })
+    await training.importWeek({ userId: athlete, today: AFTERWARDS, json: coachJson(20), startDate: '2025-08-25' })
+
+    const day = dayIn(await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS }), 1)
+
+    expect(day.orphans).toEqual([])
+    expect(day.exercises.find((one) => one.key === 'dips')?.log).toEqual({ kind: 'skipped', note: 'shoulder' })
+  })
+
+  test('the athlete’s own note on a Day outlives the coach’s revision of it', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logDay({ userId: athlete, today: AFTERWARDS, weekNumber: 20, dayOrdinal: 4, note: 'walked 5km' })
+
+    await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days[3].notes = 'Full rest. Sleep.'
+      }),
+      startDate: '2025-08-25',
+    })
+
+    const day = dayIn(await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS }), 4)
+
+    expect(day.log).toBe('walked 5km')
+    expect(day.notes).toBe('Full rest. Sleep.')
+  })
+
+  test('a Day finishes against the revised plan, not the one that was logged', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 9, startDate: '2025-06-05' })
+    await logEvery({ training, athlete, number: 9, ordinal: 7, except: [] })
+
+    await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(9, (week) => {
+        week.days[2].exercises.push({
+          key: 'calf-raises',
+          movementId: 'calf-raise',
+          name: 'Calf raises',
+          prescription: { kind: 'reps', sets: 3, reps: { min: 15, max: 15 } },
+          raw: 'Calf raises: 3×15.',
+        })
+      }),
+      startDate: '2025-06-05',
+    })
+
+    expect(dayIn(await training.getWeek({ userId: athlete, number: 9, today: AFTERWARDS }), 7).complete).toBe(false)
+  })
+
+  test('a revision the coach got wrong leaves the Logs standing along with the plan', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: AFTERWARDS,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'skipped', note: 'shoulder' },
+    })
+
+    const result = await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
+        week.days[2].exercises[3].load.value = 'ten kilos'
+      }),
+      startDate: '2025-08-25',
+    })
+
+    const day = dayIn(await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS }), 1)
+
+    expect(result.ok).toBe(false)
+    expect(day.orphans).toEqual([])
+    expect(day.exercises.find((one) => one.key === 'dips')?.log).toEqual({ kind: 'skipped', note: 'shoulder' })
   })
 })
 

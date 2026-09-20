@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { asLoad, asPrescribed, asRest } from '../../libs/Training/notation.ts'
 import type { ChangeEvent, MouseEvent } from 'react'
-import type { Day, Difficulty, Exercise, Log, Week } from '../../../shared/training.ts'
+import type { Day, Difficulty, Exercise, Log, Orphan, Week } from '../../../shared/training.ts'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -128,6 +128,8 @@ function DayDetail({
         </ul>
       )}
 
+      <Orphans orphans={day.orphans} />
+
       <DayNote
         key={day.ordinal}
         dayOrdinal={day.ordinal}
@@ -207,6 +209,54 @@ function DayNote({
       />
     </div>
   )
+}
+
+/**
+ * What was done against Exercises the coach has since dropped. Shown under the Day
+ * it happened on, and shown read-only: the plan moved on, the work did not, and
+ * there is nothing left to tap on an Exercise that is no longer asked for.
+ */
+function Orphans({ orphans }: { orphans: Orphan[] }) {
+  if (orphans.length === 0) {
+    return null
+  }
+
+  return (
+    <section className='space-y-2'>
+      <h2 className='text-sm font-semibold'>No longer in the plan</h2>
+      <ul className='space-y-2'>
+        {orphans.map((orphan) => (
+          <li
+            key={orphan.key}
+            className='space-y-1 rounded-md border border-brand px-3 py-2'
+          >
+            <p className='flex flex-wrap items-baseline gap-2'>
+              <span className='font-semibold'>{named(orphan)}</span>
+              {orphan.variant === null ? null : <span className='text-sm'>{orphan.variant}</span>}
+            </p>
+            <p className='text-sm'>{asLogged(orphan.log)}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** A Log in one line, for reading back rather than tapping. */
+function asLogged(entry: Log): string {
+  return [rated(entry), entry.note].filter((part) => part !== null && part !== '').join(' · ')
+}
+
+function rated(entry: Log): string | null {
+  if (entry.kind === 'skipped') {
+    return 'Skipped'
+  }
+
+  if (entry.kind === 'difficulty') {
+    return RATINGS.find((one) => one.difficulty === entry.difficulty)?.label ?? null
+  }
+
+  return null
 }
 
 function ExerciseItem({
@@ -381,7 +431,7 @@ function Chip({
 }
 
 /** "Dips" alone is ambiguous when the left and right arm are separate Exercises. */
-function named(exercise: Exercise): string {
+function named(exercise: Pick<Exercise, 'name' | 'side'>): string {
   return exercise.side === 'left' || exercise.side === 'right' ? `${exercise.name} (${exercise.side})` : exercise.name
 }
 

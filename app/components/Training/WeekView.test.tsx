@@ -19,6 +19,7 @@ const WEEK: Week = {
       notes: null,
       log: null,
       complete: false,
+      orphans: [],
       exercises: [
         {
           key: 'dips',
@@ -80,6 +81,7 @@ const WEEK: Week = {
       log: null,
       // Its Thursday has been and gone, and a rest Day asks for nothing else.
       complete: true,
+      orphans: [],
       exercises: [],
     },
     {
@@ -91,6 +93,24 @@ const WEEK: Week = {
       notes: null,
       log: null,
       complete: false,
+      orphans: [
+        {
+          key: 'strides',
+          movementId: 'stride',
+          name: 'Strides',
+          variant: null,
+          side: 'both',
+          optional: false,
+          toFailure: false,
+          prescription: { kind: 'time', sets: 6, seconds: { min: 20, max: 20 } },
+          load: null,
+          tempo: null,
+          restSeconds: null,
+          cue: null,
+          raw: 'Strides: 6×20s',
+          log: { kind: 'difficulty', difficulty: 'good', note: 'legs felt fine' },
+        },
+      ],
       exercises: [
         {
           key: 'zone-2-run',
@@ -120,6 +140,7 @@ const WEEK: Week = {
       log: 'walked 5km instead',
       // Nothing on it is asked for, so there was never anything to finish.
       complete: true,
+      orphans: [],
       exercises: [
         {
           key: 'dead-hang',
@@ -246,6 +267,20 @@ describe('the Day the athlete opens on', () => {
     await expect.element(screen.getByRole('heading', { name: /Active Recovery/ })).toBeVisible()
     await expect.element(screen.getByText('Optional', { exact: true })).toBeVisible()
     await expect.element(screen.getByText('2×45s', { exact: true })).toBeVisible()
+  })
+
+  test('work done against an Exercise the coach has since dropped is still shown', async () => {
+    const screen = openApp({ day: dayOf(6) })
+
+    await expect.element(screen.getByText(/No longer in the plan/)).toBeVisible()
+    await expect.element(screen.getByText('Strides', { exact: true })).toBeVisible()
+    await expect.element(screen.getByText('Good · legs felt fine', { exact: true })).toBeVisible()
+  })
+
+  test('an orphaned Log is a record, not something left to tap', async () => {
+    const screen = openApp({ day: dayOf(6) })
+
+    expect(screen.getByRole('button', { name: /Strides/ }).all()).toHaveLength(0)
   })
 
   test('any other Day of the Week can be opened from the Day being trained', async () => {

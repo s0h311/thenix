@@ -71,6 +71,11 @@ import can never fail.
 The record of what the athlete actually did on a Day. Distinct from the coach's intent.
 _Avoid_: Progress, result, history
 
+**Orphan**:
+A Log whose Exercise a later revision of the Week dropped. The plan moved on and the
+work did not, so the Log is kept and shown under its Day rather than deleted.
+_Avoid_: Stale, deleted, removed
+
 **Progression**:
 The coach's decision about which lever moves next Week. It appears in Week prose and is
 never something the app computes.

@@ -69,6 +69,11 @@ export const exercise = pgTable(
     restSeconds: jsonb('rest_seconds'),
     cue: text('cue'),
     raw: text('raw').notNull(),
+    /**
+     * Dropped by a later revision of the Week, and kept only because it carries a
+     * Log. It is no longer part of the plan: it reads back as that Log's orphan.
+     */
+    dropped: boolean('dropped').notNull().default(false),
   },
   (table) => [
     unique('exercise_day_key_unique').on(table.dayId, table.key),

@@ -64,6 +64,13 @@ export type Exercise = {
   log: Log | null
 }
 
+/**
+ * A Log the coach's revision left without an Exercise. The work was done, so it is
+ * kept and shown under its Day rather than deleted — what the coach asked for that
+ * Week is gone, but what happened is not.
+ */
+export type Orphan = Exercise & { log: Log }
+
 export type Day = {
   ordinal: number
   /** Derived from the Week's start date — display only, never stored. */
@@ -79,6 +86,8 @@ export type Day = {
    */
   log: string | null
   exercises: Exercise[]
+  /** Logs on this Day whose Exercise a later revision of the Week dropped. */
+  orphans: Orphan[]
   /**
    * Derived on read, never stored and never tapped: a training Day is finished when
    * every Exercise it asks for has a Log. Optional ones are not asked for.

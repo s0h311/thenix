@@ -1,9 +1,9 @@
-import { and, asc, eq, inArray, max } from 'drizzle-orm'
+import { and, asc, eq, inArray, max, notExists, notInArray } from 'drizzle-orm'
 import { day, dayLog, exercise, log, movement, week } from '../../infrastructure/Database/schemas/public.ts'
 import { dateOfDay } from './dayDate.ts'
 import { parseWeek } from './parseWeek.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
-import type { CurrentDay, Day, Difficulty, Exercise, ImportResult, Log, Week } from './types.ts'
+import type { CurrentDay, Day, Difficulty, Exercise, ImportResult, Log, Orphan, Week } from './types.ts'
 import type { ImportedWeek } from './weekSchema.ts'
 
 type Dependencies = {
@@ -66,7 +66,13 @@ export function createTraining({ database }: Dependencies) {
       days: dayRows.map(({ day: dayRow, log: dayLogRow }) => {
         const kind = dayRow.kind as Day['kind']
         const dated = dateOfDay({ startDate: weekRow.startDate, ordinal: dayRow.ordinal })
-        const exercises = exerciseRows.filter((row) => row.exercise.dayId === dayRow.id).map(toExercise)
+        const onDay = exerciseRows.filter((row) => row.exercise.dayId === dayRow.id)
+        const exercises = onDay.filter((row) => !row.exercise.dropped).map(toExercise)
+        // A dropped Exercise is only still here because it carries a Log — that Log,
+        // under the Day it was written on, is the orphan.
+        const orphans = onDay.flatMap<Orphan>((row) =>
+          row.exercise.dropped && row.log !== null ? [{ ...toExercise(row), log: toLog(row.log) }] : [],
+        )
 
         return {
           ordinal: dayRow.ordinal,
@@ -76,6 +82,7 @@ export function createTraining({ database }: Dependencies) {
           notes: dayRow.notes,
           log: dayLogRow?.note ?? null,
           exercises,
+          orphans,
           complete: isComplete({ kind, date: dated.date, exercises, today }),
         }
       }),
@@ -143,33 +150,55 @@ export function createTraining({ database }: Dependencies) {
         throw new Error('the Week was not written')
       }
 
-      await transaction.delete(day).where(eq(day.weekId, weekRow.id))
+      // A revision is matched onto what is already there rather than replacing it:
+      // Days by ordinal and Exercises by key, which is what lets a Log outlive the
+      // plan it was written against.
+      const ordinals = imported.days.map((one) => one.ordinal)
+
+      await transaction
+        .delete(day)
+        .where(
+          ordinals.length === 0
+            ? eq(day.weekId, weekRow.id)
+            : and(eq(day.weekId, weekRow.id), notInArray(day.ordinal, ordinals)),
+        )
 
       for (const importedDay of imported.days) {
+        const revisedDay = {
+          kind: importedDay.kind,
+          focus: importedDay.focus ?? null,
+          // The coach's words about the Day. The athlete's own note lives in `day_log`
+          // and is deliberately not touched here.
+          notes: importedDay.notes ?? null,
+        }
+
         const [dayRow] = await transaction
           .insert(day)
-          .values({
-            weekId: weekRow.id,
-            ordinal: importedDay.ordinal,
-            kind: importedDay.kind,
-            focus: importedDay.focus ?? null,
-            notes: importedDay.notes ?? null,
-          })
+          .values({ weekId: weekRow.id, ordinal: importedDay.ordinal, ...revisedDay })
+          .onConflictDoUpdate({ target: [day.weekId, day.ordinal], set: revisedDay })
           .returning({ id: day.id })
 
         if (dayRow === undefined) {
           throw new Error('the Day was not written')
         }
 
-        if (importedDay.exercises.length === 0) {
-          continue
-        }
+        const keys = importedDay.exercises.map((one) => one.key)
+        const outOfPlan =
+          keys.length === 0
+            ? eq(exercise.dayId, dayRow.id)
+            : and(eq(exercise.dayId, dayRow.id), notInArray(exercise.key, keys))
 
-        await transaction.insert(exercise).values(
-          importedDay.exercises.map((one, position) => ({
-            dayId: dayRow.id,
+        // An Exercise the revision no longer asks for goes, unless the athlete already
+        // did it: that one is kept out of the plan, carrying its Log as an orphan.
+        await transaction
+          .delete(exercise)
+          .where(and(outOfPlan, notExists(transaction.select().from(log).where(eq(log.exerciseId, exercise.id)))))
+
+        await transaction.update(exercise).set({ dropped: true }).where(outOfPlan)
+
+        for (const [position, one] of importedDay.exercises.entries()) {
+          const revisedExercise = {
             position,
-            key: one.key,
             movementId: one.movementId,
             name: one.name,
             variant: one.variant ?? null,
@@ -182,8 +211,16 @@ export function createTraining({ database }: Dependencies) {
             restSeconds: one.restSeconds ?? null,
             cue: one.cue ?? null,
             raw: one.raw,
-          })),
-        )
+            // The coach putting a dropped Exercise back rejoins it to the plan, Log
+            // and all: an orphan is a state of the plan, not a state of the Log.
+            dropped: false,
+          }
+
+          await transaction
+            .insert(exercise)
+            .values({ dayId: dayRow.id, key: one.key, ...revisedExercise })
+            .onConflictDoUpdate({ target: [exercise.dayId, exercise.key], set: revisedExercise })
+        }
       }
     })
   }
@@ -251,6 +288,7 @@ export function createTraining({ database }: Dependencies) {
             eq(week.number, weekNumber),
             eq(day.ordinal, dayOrdinal),
             eq(exercise.key, exerciseKey),
+            eq(exercise.dropped, false),
           ),
         )
 
@@ -374,16 +412,12 @@ function toExercise({ exercise: row, log: logRow }: ExerciseRow): Exercise {
     restSeconds: row.restSeconds as Exercise['restSeconds'],
     cue: row.cue,
     raw: row.raw,
-    log: toLog(logRow),
+    log: logRow === null ? null : toLog(logRow),
   }
 }
 
 /** The three shapes of ADR 0003, read back out of the flat columns they are stored in. */
-function toLog(row: typeof log.$inferSelect | null): Log | null {
-  if (row === null) {
-    return null
-  }
-
+function toLog(row: typeof log.$inferSelect): Log {
   if (row.skipped) {
     return { kind: 'skipped', note: row.note }
   }
