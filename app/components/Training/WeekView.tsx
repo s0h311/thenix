@@ -3,8 +3,10 @@ import { CopyButton } from './CopyButton.tsx'
 import { logFor, noTaps, noteOf, tally, tapOf, withTap } from '../../libs/Training/logging.ts'
 import { asDate, asLoad, asPrescribed, asRest } from '../../libs/Training/notation.ts'
 import { openOn } from '../../libs/Training/opening.ts'
+import { pillsOf } from '../../libs/Training/pills.ts'
 import type { Logged, Noted, Taps } from '../../libs/Training/logging.ts'
 import type { Picked } from '../../libs/Training/opening.ts'
+import type { Mark, Pill } from '../../libs/Training/pills.ts'
 import type { ChangeEvent, MouseEvent } from 'react'
 import type { Day, Difficulty, Exercise, Log, Orphan, Week } from '../../../shared/training.ts'
 
@@ -14,6 +16,19 @@ const RATINGS: { difficulty: Difficulty; label: string }[] = [
   { difficulty: 'good', label: 'Good' },
   { difficulty: 'challenging', label: 'Challenging' },
 ]
+
+/**
+ * A Day's state on the strip, as a shape and as a word. Both, always: the fill
+ * alone does not survive a glance in daylight, and the word is what is read out.
+ */
+const MARKS: Record<Mark, { glyph: string; said: string }> = {
+  done: { glyph: '✓', said: 'done' },
+  part: { glyph: '•', said: 'part trained' },
+  untouched: { glyph: '○', said: 'untouched' },
+}
+
+const PILL =
+  'flex shrink-0 flex-col items-center gap-0.5 rounded-xl border border-hairline bg-raised px-3 py-2 text-ink-muted transition duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand aria-[current=true]:border-transparent aria-[current=true]:bg-brand aria-[current=true]:font-semibold aria-[current=true]:text-on-brand'
 
 export type { Logged, Noted } from '../../libs/Training/logging.ts'
 
@@ -72,11 +87,17 @@ export function WeekView({
         onRetry={onRetry}
       />
 
+      <h1 className='text-display'>Week {week.number}</h1>
+
+      <DayStrip
+        pills={pillsOf({ week, taps, notes: noted })}
+        open={open?.ordinal ?? null}
+        today={day?.ordinal ?? null}
+        onOpen={pick}
+      />
+
       {open === null ? (
-        <section className='space-y-1'>
-          <h1 className='text-2xl font-semibold'>Week {week.number}</h1>
-          <p>This Week holds no Days.</p>
-        </section>
+        <p>This Week holds no Days.</p>
       ) : (
         <DayDetail
           day={open}
@@ -91,12 +112,6 @@ export function WeekView({
       <WeekNotes notes={week.notes} />
 
       <Export onExport={onExport} />
-
-      <DayStrip
-        week={week}
-        open={open?.ordinal ?? null}
-        onOpen={pick}
-      />
     </div>
   )
 }
@@ -152,7 +167,8 @@ function DayDetail({
           Day {day.ordinal} · {dated(day)}
           {day.ordinal === today?.ordinal ? ' · Today' : ''}
         </p>
-        <h1 className='text-2xl font-semibold'>{day.focus ?? (day.kind === 'rest' ? 'Full Rest' : 'Training')}</h1>
+        {/* The screen's heading is the Week; the Day under it is a level down. */}
+        <h2 className='text-title'>{day.focus ?? (day.kind === 'rest' ? 'Full Rest' : 'Training')}</h2>
         <Progress
           day={day}
           taps={taps}
@@ -514,9 +530,31 @@ function Export({ onExport }: { onExport: () => Promise<void> }) {
   )
 }
 
-function DayStrip({ week, open, onOpen }: { week: Week; open: number | null; onOpen: (ordinal: number) => void }) {
+/**
+ * Where the athlete is in the Week, and every other Day of it, at the top of the
+ * screen: the foot of a phone is the tab bar now, and a Day can be long enough that
+ * a strip under it is a scroll away mid-set. Pinned, so moving Day never costs one.
+ *
+ * Each state is a shape as well as a fill — a tick, a dot, a ring — because the
+ * whole point of the strip is being read at a glance, in daylight, one-handed.
+ */
+function DayStrip({
+  pills,
+  open,
+  today,
+  onOpen,
+}: {
+  pills: Pill[]
+  open: number | null
+  today: number | null
+  onOpen: (ordinal: number) => void
+}) {
   function openDay(event: MouseEvent<HTMLButtonElement>) {
     onOpen(Number(event.currentTarget.value))
+  }
+
+  if (pills.length === 0) {
+    return null
   }
 
   return (
@@ -524,23 +562,55 @@ function DayStrip({ week, open, onOpen }: { week: Week; open: number | null; onO
     // the Day asks for, which is what a rest Day having none has to mean.
     <nav
       aria-label='The Days of this Week'
-      className='flex flex-wrap gap-2'
+      className='sticky top-0 z-30 -mx-4 overflow-x-auto border-b border-hairline bg-page px-4 py-2'
     >
-      {week.days.map((day) => (
-        <button
-          key={day.ordinal}
-          type='button'
-          value={day.ordinal}
-          onClick={openDay}
-          aria-current={day.ordinal === open}
-          className='rounded-md bg-legacy-surface px-3 py-2 text-sm aria-[current=true]:bg-legacy aria-[current=true]:text-white'
-        >
-          Day {day.ordinal}
-          {day.focus === null ? '' : ` · ${day.focus}`}
-        </button>
-      ))}
+      <div className='flex gap-2'>
+        {pills.map((pill) => (
+          <button
+            key={pill.ordinal}
+            type='button'
+            value={pill.ordinal}
+            onClick={openDay}
+            aria-current={pill.ordinal === open}
+            aria-label={nameOf(pill, pill.ordinal === today)}
+            className={`${PILL} ${pill.ordinal === today ? 'ring-2 ring-ink' : ''}`}
+          >
+            <span
+              aria-hidden='true'
+              className='text-caption uppercase'
+            >
+              {pill.weekday.slice(0, 3)}
+            </span>
+            <span
+              aria-hidden='true'
+              className='numerals text-label'
+            >
+              Day {pill.ordinal}
+            </span>
+            <span
+              aria-hidden='true'
+              className='text-caption leading-none'
+            >
+              {MARKS[pill.mark].glyph}
+            </span>
+          </button>
+        ))}
+      </div>
     </nav>
   )
+}
+
+/**
+ * What one pill says out loud. The state is a word here and a shape on screen, and
+ * today is named rather than left to the ring around it: a strip whose "you are
+ * here" and "today" are both marks needs the difference said.
+ */
+function nameOf(pill: Pill, isToday: boolean): string {
+  const weekday = `${pill.weekday[0]?.toUpperCase()}${pill.weekday.slice(1)}`
+
+  return [`Day ${pill.ordinal}`, weekday, isToday ? 'today' : null, MARKS[pill.mark].said]
+    .filter((part) => part !== null)
+    .join(', ')
 }
 
 /** "Monday 25 Aug" — the weekday is derived, so it is shown, never stored. */

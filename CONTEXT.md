@@ -37,6 +37,11 @@ Revision may leave a gap where it dropped one — but the ordinal _is_ the Day, 
 Week holds it twice: a paste that writes one Day twice is rejected, not merged.
 Which Day is _today_ is the athlete's own date, never the server's or UTC's: the phone
 sends it on every call, because the training happened where the athlete is standing.
+How far a Day has got is one of three **marks**, wherever Days are shown together:
+_done_ when everything it asks for has a Log — a rest Day asks for none and is done by
+the clock — _part trained_ when anything at all was recorded on it, and _untouched_
+when nothing was. Each is a shape as well as a fill: the marks are read at a glance,
+one-handed, in daylight.
 _Avoid_: Session, date, workout
 
 **Focus**:
