@@ -1,5 +1,16 @@
 import { describe, expect, test } from 'vitest'
-import { asAsked, asDate, asImport, asLoad, asMoved, asPrescribed, asRest, asRevision, asSpan } from './notation.ts'
+import {
+  asAsked,
+  asDate,
+  asImport,
+  asLoad,
+  asMoved,
+  asPrescribed,
+  asRest,
+  asRevision,
+  asSetAside,
+  asSpan,
+} from './notation.ts'
 import type { Prescription, Revision, Side } from '../../../shared/training.ts'
 
 /** The coach's own notation, as the Week prose writes it. */
@@ -115,19 +126,19 @@ describe('when a Week ran', () => {
 
 describe('a Week the paste would revise', () => {
   test('it names the Week, when it runs, and what is recorded against it', () => {
-    expect(asRevision({ number: 12, revising: { startDate: '2025-06-23', logged: 4 } })).toBe(
+    expect(asRevision({ number: 12, revising: { startDate: '2025-06-23', logged: 4, held: [] } })).toBe(
       'Week 12 is already on your shelf, from 23 Jun, with 4 Logs on it. Importing replaces the plan and keeps your Logs.',
     )
   })
 
   test('one Log is one Log, not 1 Logs', () => {
-    expect(asRevision({ number: 12, revising: { startDate: '2025-06-23', logged: 1 } })).toBe(
+    expect(asRevision({ number: 12, revising: { startDate: '2025-06-23', logged: 1, held: [] } })).toBe(
       'Week 12 is already on your shelf, from 23 Jun, with 1 Log on it. Importing replaces the plan and keeps your Logs.',
     )
   })
 
   test('a Week nothing was recorded against promises nothing about Logs', () => {
-    expect(asRevision({ number: 12, revising: { startDate: '2025-06-23', logged: 0 } })).toBe(
+    expect(asRevision({ number: 12, revising: { startDate: '2025-06-23', logged: 0, held: [] } })).toBe(
       'Week 12 is already on your shelf, from 23 Jun. Importing replaces its plan.',
     )
   })
@@ -139,7 +150,7 @@ describe('the button that confirms a paste', () => {
   })
 
   test('a Week number already on the shelf is replaced, and the button says which', () => {
-    expect(asImport({ number: 12, revising: { startDate: '2025-06-23', logged: 4 } })).toBe('Replace Week 12')
+    expect(asImport({ number: 12, revising: { startDate: '2025-06-23', logged: 4, held: [] } })).toBe('Replace Week 12')
   })
 })
 
@@ -150,31 +161,31 @@ function moved({ revising, startsOn }: { revising: Revision | null; startsOn: st
 
 describe('re-dating a Week the athlete is already training', () => {
   test('a Week pushed on a week says how far it goes and that the Logs go with it', () => {
-    expect(moved({ revising: { startDate: '2025-06-23', logged: 4 }, startsOn: '2025-06-30' })).toBe(
+    expect(moved({ revising: { startDate: '2025-06-23', logged: 4, held: [] }, startsOn: '2025-06-30' })).toBe(
       'This moves Week 12 forward 7 days, to 30 Jun. Its 4 Logs move with it.',
     )
   })
 
   test('a Week pulled back reads as back, not as a negative number of days', () => {
-    expect(moved({ revising: { startDate: '2025-06-23', logged: 2 }, startsOn: '2025-06-21' })).toBe(
+    expect(moved({ revising: { startDate: '2025-06-23', logged: 2, held: [] }, startsOn: '2025-06-21' })).toBe(
       'This moves Week 12 back 2 days, to 21 Jun. Its 2 Logs move with it.',
     )
   })
 
   test('a Week out by a single day is out by a day, not by 1 days', () => {
-    expect(moved({ revising: { startDate: '2025-06-23', logged: 1 }, startsOn: '2025-06-24' })).toBe(
+    expect(moved({ revising: { startDate: '2025-06-23', logged: 1, held: [] }, startsOn: '2025-06-24' })).toBe(
       'This moves Week 12 forward 1 day, to 24 Jun. Its 1 Log moves with it.',
     )
   })
 
   test('a Week nothing is recorded against still moves, and promises nothing about Logs', () => {
-    expect(moved({ revising: { startDate: '2025-06-23', logged: 0 }, startsOn: '2025-06-30' })).toBe(
+    expect(moved({ revising: { startDate: '2025-06-23', logged: 0, held: [] }, startsOn: '2025-06-30' })).toBe(
       'This moves Week 12 forward 7 days, to 30 Jun.',
     )
   })
 
   test('the date the Week already runs on moves nothing, so nothing is said', () => {
-    expect(moved({ revising: { startDate: '2025-06-23', logged: 4 }, startsOn: '2025-06-23' })).toBeNull()
+    expect(moved({ revising: { startDate: '2025-06-23', logged: 4, held: [] }, startsOn: '2025-06-23' })).toBeNull()
   })
 
   test('a Week number the athlete does not have has nothing to move', () => {
@@ -206,5 +217,29 @@ describe('a Day of a Week as it parsed', () => {
 
   test('a Day marked rest that still carries work is read by the work, not by the mark', () => {
     expect(asked({ kind: 'rest', exercises: 2 })).toBe('2 Exercises')
+  })
+})
+
+describe('the Days a Revision sets aside, as the Preview says it', () => {
+  test('a Revision on day 5 says days 1–4 keep the plan they had', () => {
+    expect(asSetAside({ number: 20, setAside: [1, 2, 3, 4], of: 7 })).toBe(
+      'Days 1–4 are already behind you, so they keep the plan they had.',
+    )
+  })
+
+  test('one Day set aside is one Day, not Days 1–1', () => {
+    expect(asSetAside({ number: 20, setAside: [1], of: 7 })).toBe(
+      'Day 1 is already behind you, so it keeps the plan it had.',
+    )
+  })
+
+  test('a Revision whose every Day is behind the athlete says no Day will change, only the notes and dates', () => {
+    expect(asSetAside({ number: 20, setAside: [1, 2, 3, 4, 5, 6, 7], of: 7 })).toBe(
+      'Every Day of Week 20 is already behind you, so no Day will change. Only the Week’s notes and dates will.',
+    )
+  })
+
+  test('nothing set aside says nothing', () => {
+    expect(asSetAside({ number: 20, setAside: [], of: 7 })).toBeNull()
   })
 })

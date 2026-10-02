@@ -4,6 +4,7 @@
  * on the Preview — and two copies of one rule drift apart.
  */
 
+import { dateOfDay } from './dayDate.ts'
 import type { Day } from './training.ts'
 
 /**
@@ -48,4 +49,40 @@ export function isDone({
  */
 export function isSettled({ date, today, done }: { date: string; today: string; done: boolean }): boolean {
   return date < today || (date === today && done)
+}
+
+/**
+ * One Day of the Week already on the shelf, as far as the boundary needs it: how far
+ * it has been trained. Its date is not here — that comes from the start date being
+ * written, which the athlete can still change.
+ */
+export type Held = { ordinal: number; kind: Day['kind']; asked: Asked[] }
+
+/**
+ * Which ordinals a Revision written today, starting on `startDate`, cannot reach. The
+ * one rule both the write and the Preview's marks go through. Settled belongs to the
+ * ordinal and its date, not to a row: a Day the shelf no longer holds is Settled all
+ * the same. `held` is null for a Week number not on the shelf, which has no training
+ * yet for the boundary to protect.
+ */
+export function settledBy({
+  startDate,
+  today,
+  held,
+}: {
+  startDate: string
+  today: string
+  held: Held[] | null
+}): (ordinal: number) => boolean {
+  if (held === null) {
+    return () => false
+  }
+
+  return (ordinal) => {
+    const { date } = dateOfDay({ startDate, ordinal })
+    const day = held.find((one) => one.ordinal === ordinal)
+    const done = day !== undefined && isDone({ kind: day.kind, date, asked: day.asked, today })
+
+    return isSettled({ date, today, done })
+  }
 }

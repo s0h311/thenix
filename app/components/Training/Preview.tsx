@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { asAsked, asImport, asMoved, asRevision } from '../../libs/Training/notation.ts'
+import { today } from '../../libs/Training/clock.ts'
+import { asAsked, asImport, asMoved, asRevision, asSetAside } from '../../libs/Training/notation.ts'
+import { settledBy } from '../../../shared/settled.ts'
 import { Button } from '../UI/Button.tsx'
 import { Card } from '../UI/Card.tsx'
 import { Caution } from '../UI/Caution.tsx'
@@ -37,6 +39,12 @@ export function Preview({
   // stays editable on a Revision too — but a Day's date is derived from the Week's
   // start, so moving one already being trained moves its Logs. That is said, not blocked.
   const moving = asMoved({ number: preview.number, revising, startsOn })
+  // Worked out here rather than asked for, because it re-marks on every keystroke in
+  // the date field — by the same rule the write goes through. The write reads its own
+  // today, so a Preview confirmed after midnight sets aside one Day more than it shows.
+  const settled = settledBy({ startDate: startsOn, today: today(), held: revising?.held ?? null })
+  const setAside = preview.days.map((day) => day.ordinal).filter(settled)
+  const keeping = asSetAside({ number: preview.number, setAside, of: preview.days.length })
 
   return (
     <Layer
@@ -73,6 +81,11 @@ export function Preview({
                     differing only in their ordinal cannot be scanned. */}
                 <span className='ml-auto text-label text-ink-muted'>{asAsked(day)}</span>
               </p>
+              {/* Shown as it read rather than hidden, so a coach who rewrote a Day
+                  already behind the athlete is seen doing it and can be asked why. */}
+              {settled(day.ordinal) ? (
+                <p className='text-label font-semibold text-ink-muted'>Already behind you — keeps the plan it had</p>
+              ) : null}
               {day.exercises.length === 0 ? null : (
                 <ul className='space-y-1'>
                   {day.exercises.map((exercise) => (
@@ -100,6 +113,14 @@ export function Preview({
         />
         {/* Announced, because it appears while the athlete is inside the date field. */}
         {moving === null ? null : <Caution live>{moving}</Caution>}
+        {/* Beside the date because the date moves it: the athlete watches Days come
+            back into the Revision as the Week is moved forward. */}
+        <p
+          aria-live='polite'
+          className='text-label font-semibold empty:hidden'
+        >
+          {keeping}
+        </p>
       </Card>
     </Layer>
   )

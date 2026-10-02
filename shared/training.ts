@@ -4,6 +4,8 @@
  * these are the shapes that survive the round trip through the database.
  */
 
+import type { Held } from './settled.ts'
+
 export type Weekday = 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday'
 
 export type Range = {
@@ -139,6 +141,11 @@ export type Revision = {
   startDate: string
   /** Logs written against it, orphans and Day notes included. */
   logged: number
+  /**
+   * How far each of its Days has been trained — the one thing the Preview cannot
+   * derive for itself when it marks which Days the Revision sets aside.
+   */
+  held: Held[]
 }
 
 /**

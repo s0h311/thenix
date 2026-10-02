@@ -1,7 +1,8 @@
 import { and, asc, eq, inArray, max, notExists, notInArray } from 'drizzle-orm'
 import { day, dayLog, exercise, log, movement, week } from '../../infrastructure/Database/schemas/public.ts'
-import { isDone, isSettled } from '../../../shared/settled.ts'
-import { dateOfDay, startAfter } from './dayDate.ts'
+import { dateOfDay } from '../../../shared/dayDate.ts'
+import { isDone, settledBy } from '../../../shared/settled.ts'
+import { startAfter } from './dayDate.ts'
 import { forCoach } from './forCoach.ts'
 import { parseWeek } from './parseWeek.ts'
 import { schemaForCoach } from './weekSchema.ts'
@@ -152,7 +153,11 @@ export function createTraining({ database }: Dependencies) {
       0,
     )
 
-    return { startDate: planned.startDate, logged }
+    return {
+      startDate: planned.startDate,
+      logged,
+      held: planned.days.map((day) => ({ ordinal: day.ordinal, kind: day.kind, asked: asked(day.exercises) })),
+    }
   }
 
   /**
@@ -245,9 +250,8 @@ export function createTraining({ database }: Dependencies) {
   /**
    * Which Days a Revision written today cannot reach, dated from the start date being
    * written rather than the one on the shelf — re-dating a Week forward un-Settles its
-   * Days on purpose (ADR 0004). Settled belongs to the ordinal and its date, not to a
-   * row: a Day the shelf no longer holds is Settled all the same. A Week number not on
-   * the shelf has no training yet for the boundary to protect.
+   * Days on purpose (ADR 0004). Read off the same Revision the Preview is handed, so
+   * the marks the athlete confirmed and the Days the write leaves alone are one rule.
    */
   async function settledOf({
     userId,
@@ -260,19 +264,9 @@ export function createTraining({ database }: Dependencies) {
     startDate: string
     today: string
   }): Promise<(ordinal: number) => boolean> {
-    const planned = await loadWeek({ userId, number })
+    const revising = await revisionOf({ userId, number })
 
-    if (planned === null) {
-      return () => false
-    }
-
-    return (ordinal) => {
-      const { date } = dateOfDay({ startDate, ordinal })
-      const held = planned.days.find((one) => one.ordinal === ordinal)
-      const done = held !== undefined && isDone({ kind: held.kind, date, asked: asked(held.exercises), today })
-
-      return isSettled({ date, today, done })
-    }
+    return settledBy({ startDate, today, held: revising?.held ?? null })
   }
 
   async function writeWeek({

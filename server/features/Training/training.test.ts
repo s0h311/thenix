@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 import { createTestDatabase } from '../../infrastructure/Database/testDatabase.ts'
 import { user } from '../../infrastructure/Database/schemas/auth.ts'
+import { settledBy } from '../../../shared/settled.ts'
 import { createTraining } from './createTraining.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
 import type { Day, DayOnShelf, Exercise, Week } from './types.ts'
@@ -892,6 +893,32 @@ describe('a Revision leaves Settled Days alone', () => {
     expect(dayIn(await training.getWeek({ userId: athlete, number: 20, today: FRIDAY }), 4).focus).toBe('Full Rest')
   })
 
+  test('the Preview sets aside exactly the Days the write then leaves alone — one rule, not two', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await logEvery({ training, athlete, number: 20, ordinal: 5, except: [] })
+
+    const offered = await training.previewWeek({ userId: athlete, json: planB, today: FRIDAY })
+
+    if (!offered.ok) {
+      throw new Error('the Revision was not offered')
+    }
+
+    const settled = settledBy({ startDate: offered.startDate, today: FRIDAY, held: offered.revising?.held ?? null })
+
+    await training.importWeek({ userId: athlete, json: planB, startDate: offered.startDate, today: FRIDAY })
+
+    const kept = (await training.getWeek({ userId: athlete, number: 20, today: FRIDAY }))?.days
+      .filter((one) => one.focus !== 'Plan B')
+      .map((one) => one.ordinal)
+
+    expect([offered.preview.days.map((one) => one.ordinal).filter(settled), kept]).toEqual([
+      [1, 2, 3, 4, 5],
+      [1, 2, 3, 4, 5],
+    ])
+  })
+
   test('a Settled Day is still logged — Settled binds the coach, not the athlete', async () => {
     const { training, athlete } = await openApp()
 
@@ -1182,7 +1209,7 @@ describe('previewing the Week before it is saved', () => {
 
     const result = await training.previewWeek({ userId: athlete, json: coachJson(12), today: AFTERWARDS })
 
-    expect(result.ok ? result.revising : null).toEqual({ startDate: '2025-06-26', logged: 2 })
+    expect(result.ok ? result.revising : null).toMatchObject({ startDate: '2025-06-26', logged: 2 })
   })
 
   test('a Week the athlete has never imported is not a revision of anything', async () => {
