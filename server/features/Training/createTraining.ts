@@ -1,9 +1,11 @@
 import { and, asc, eq, inArray, max, notExists, notInArray } from 'drizzle-orm'
 import { day, dayLog, exercise, log, movement, week } from '../../infrastructure/Database/schemas/public.ts'
+import { isDone, isSettled } from '../../../shared/settled.ts'
 import { dateOfDay, startAfter } from './dayDate.ts'
 import { forCoach } from './forCoach.ts'
 import { parseWeek } from './parseWeek.ts'
 import { schemaForCoach } from './weekSchema.ts'
+import type { Asked } from '../../../shared/settled.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
 import type { PlannedWeek } from './forCoach.ts'
 import type {
@@ -124,7 +126,7 @@ export function createTraining({ database }: Dependencies) {
       ...planned,
       days: planned.days.map((day) => ({
         ...day,
-        complete: isComplete({ ...day, exercises: asked(day.exercises), today }),
+        complete: isDone({ ...day, asked: asked(day.exercises), today }),
       })),
     }
   }
@@ -226,10 +228,10 @@ export function createTraining({ database }: Dependencies) {
           ordinal: row.ordinal,
           kind,
           date,
-          complete: isComplete({
+          complete: isDone({
             kind,
             date,
-            exercises: onDay.filter((one) => !one.dropped).map((one) => ({ ...one, logged: one.logged !== null })),
+            asked: onDay.filter((one) => !one.dropped).map((one) => ({ ...one, logged: one.logged !== null })),
             today,
           }),
           touched: row.noted !== null || onDay.some((one) => one.logged !== null),
@@ -240,14 +242,50 @@ export function createTraining({ database }: Dependencies) {
     return shelf
   }
 
+  /**
+   * Which Days a Revision written today cannot reach, dated from the start date being
+   * written rather than the one on the shelf — re-dating a Week forward un-Settles its
+   * Days on purpose (ADR 0004). Settled belongs to the ordinal and its date, not to a
+   * row: a Day the shelf no longer holds is Settled all the same. A Week number not on
+   * the shelf has no training yet for the boundary to protect.
+   */
+  async function settledOf({
+    userId,
+    number,
+    startDate,
+    today,
+  }: {
+    userId: string
+    number: number
+    startDate: string
+    today: string
+  }): Promise<(ordinal: number) => boolean> {
+    const planned = await loadWeek({ userId, number })
+
+    if (planned === null) {
+      return () => false
+    }
+
+    return (ordinal) => {
+      const { date } = dateOfDay({ startDate, ordinal })
+      const held = planned.days.find((one) => one.ordinal === ordinal)
+      const done = held !== undefined && isDone({ kind: held.kind, date, asked: asked(held.exercises), today })
+
+      return isSettled({ date, today, done })
+    }
+  }
+
   async function writeWeek({
     userId,
     startDate,
     imported,
+    settled,
   }: {
     userId: string
     startDate: string
     imported: ImportedWeek
+    /** The Days this write must not touch, whatever the paste says of them. */
+    settled: (ordinal: number) => boolean
   }): Promise<void> {
     await database.transaction(async (transaction) => {
       const movementIds = [
@@ -285,8 +323,12 @@ export function createTraining({ database }: Dependencies) {
 
       // A whole Day the revision no longer asks for is treated as its Exercises are:
       // it goes, unless something was recorded on it. A Day that was trained outlives
-      // the plan that asked for it, carrying its Logs as orphans.
-      const withdrawn = (await transaction.select({ id: day.id }).from(day).where(outOfWeek)).map((row) => row.id)
+      // the plan that asked for it, carrying its Logs as orphans. Leaving a Settled Day
+      // out is not a withdrawal: omission is the strongest edit there is, and a coach
+      // trimming the Week cannot erase a Day already behind the athlete.
+      const withdrawn = (await transaction.select({ id: day.id, ordinal: day.ordinal }).from(day).where(outOfWeek))
+        .filter((row) => !settled(row.ordinal))
+        .map((row) => row.id)
 
       if (withdrawn.length > 0) {
         await transaction
@@ -314,6 +356,10 @@ export function createTraining({ database }: Dependencies) {
       }
 
       for (const importedDay of imported.days) {
+        if (settled(importedDay.ordinal)) {
+          continue
+        }
+
         const revisedDay = {
           kind: importedDay.kind,
           focus: importedDay.focus ?? null,
@@ -394,7 +440,11 @@ export function createTraining({ database }: Dependencies) {
         return { ok: false, errors: parsed.errors }
       }
 
-      await writeWeek({ userId, startDate, imported: parsed.week })
+      // Settled is read from the `today` sent with the write, never the Preview's: a
+      // Preview opened before midnight and confirmed after writes one Day fewer.
+      const settled = await settledOf({ userId, number: parsed.week.number, startDate, today })
+
+      await writeWeek({ userId, startDate, imported: parsed.week, settled })
 
       const written = await readWeek({ userId, number: parsed.week.number, today })
 
@@ -618,39 +668,7 @@ function currentIn({ spans, today }: { spans: Span[]; today: string }): number |
   return running?.number ?? null
 }
 
-/**
- * Whether a Day has finished. Nothing stores this and nothing sets it: a training
- * Day is done when every Exercise it asks for has been logged, and an Exercise the
- * coach marked `(Optional)` is never one it asks for.
- */
-function isComplete({
-  kind,
-  date,
-  exercises,
-  today,
-}: {
-  kind: Day['kind']
-  date: string
-  /** Only what the Day asks for, reduced to the two things that decide it. */
-  exercises: Asked[]
-  today: string
-}): boolean {
-  // A rest Day asks for nothing, so the only thing that can finish it is the clock —
-  // and it is the athlete's clock, because that is where the resting happened.
-  if (kind === 'rest') {
-    return date < today
-  }
-
-  return exercises.every((one) => one.optional || one.logged)
-}
-
-/**
- * What the Day asks for, as completion measures it. An Exercise a Revision dropped
- * is never here: it is not asked for any more, and its Log is an Orphan — something
- * recorded on the Day rather than something outstanding on it.
- */
-type Asked = { optional: boolean; logged: boolean }
-
+/** What a read Day asks for, as done measures it. */
 function asked(exercises: Exercise[]): Asked[] {
   return exercises.map((one) => ({ optional: one.optional, logged: one.log !== null }))
 }
