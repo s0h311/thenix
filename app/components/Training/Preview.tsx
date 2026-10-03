@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { today } from '../../libs/Training/clock.ts'
+import { setAsideOf } from '../../libs/Training/importing.ts'
 import { asAsked, asImport, asMoved, asRevision, asSetAside } from '../../libs/Training/notation.ts'
-import { settledBy } from '../../../shared/settled.ts'
 import { Button } from '../UI/Button.tsx'
 import { Card } from '../UI/Card.tsx'
 import { Caution } from '../UI/Caution.tsx'
@@ -42,9 +42,13 @@ export function Preview({
   // Worked out here rather than asked for, because it re-marks on every keystroke in
   // the date field — by the same rule the write goes through. The write reads its own
   // today, so a Preview confirmed after midnight sets aside one Day more than it shows.
-  const settled = settledBy({ startDate: startsOn, today: today(), held: revising?.held ?? null })
-  const setAside = preview.days.map((day) => day.ordinal).filter(settled)
-  const keeping = asSetAside({ number: preview.number, setAside, of: preview.days.length })
+  const { settled, setAside, withdrawing } = setAsideOf({
+    ordinals: preview.days.map((day) => day.ordinal),
+    revising,
+    startsOn,
+    today: today(),
+  })
+  const setAsideNote = asSetAside({ number: preview.number, setAside, of: preview.days.length, withdrawing })
 
   return (
     <Layer
@@ -119,7 +123,7 @@ export function Preview({
           aria-live='polite'
           className='text-label font-semibold empty:hidden'
         >
-          {keeping}
+          {setAsideNote}
         </p>
       </Card>
     </Layer>

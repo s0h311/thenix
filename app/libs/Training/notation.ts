@@ -158,22 +158,27 @@ export function asSetAside({
   number,
   setAside,
   of,
+  withdrawing,
 }: {
   number: number
   /** The ordinals of the pasted Days the Revision cannot reach. */
   setAside: number[]
   /** How many Days the paste holds. */
   of: number
+  /** Whether the Revision takes away a Day the paste leaves out. */
+  withdrawing: boolean
 }): string | null {
-  const first = setAside.at(0)
-  const last = setAside.at(-1)
+  const sorted = setAside.toSorted((one, other) => one - other)
+  const first = sorted.at(0)
+  const last = sorted.at(-1)
 
   if (first === undefined || last === undefined) {
     return null
   }
 
-  // Still confirmed: the Week's prose and its start date are replaced regardless.
-  if (setAside.length === of) {
+  // Still confirmed: the Week's prose and its start date are replaced regardless. Not
+  // said while a Day the paste leaves out is being withdrawn — that Day does change.
+  if (setAside.length === of && !withdrawing) {
     return `Every Day of Week ${number} is already behind you, so no Day will change. Only the Week’s notes and dates will.`
   }
 

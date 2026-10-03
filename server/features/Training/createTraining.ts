@@ -2,11 +2,11 @@ import { and, asc, eq, inArray, max, notExists, notInArray } from 'drizzle-orm'
 import { day, dayLog, exercise, log, movement, week } from '../../infrastructure/Database/schemas/public.ts'
 import { dateOfDay } from '../../../shared/dayDate.ts'
 import { isDone, settledBy } from '../../../shared/settled.ts'
-import { startAfter } from './dayDate.ts'
+import { startAfter } from './startAfter.ts'
 import { forCoach } from './forCoach.ts'
 import { parseWeek } from './parseWeek.ts'
 import { schemaForCoach } from './weekSchema.ts'
-import type { Asked } from '../../../shared/settled.ts'
+import type { Asked } from '../../../shared/training.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
 import type { PlannedWeek } from './forCoach.ts'
 import type {
@@ -156,7 +156,7 @@ export function createTraining({ database }: Dependencies) {
     return {
       startDate: planned.startDate,
       logged,
-      held: planned.days.map((day) => ({ ordinal: day.ordinal, kind: day.kind, asked: asked(day.exercises) })),
+      shelved: planned.days.map((day) => ({ ordinal: day.ordinal, kind: day.kind, asked: asked(day.exercises) })),
     }
   }
 
@@ -266,7 +266,7 @@ export function createTraining({ database }: Dependencies) {
   }): Promise<(ordinal: number) => boolean> {
     const revising = await revisionOf({ userId, number })
 
-    return settledBy({ startDate, today, held: revising?.held ?? null })
+    return settledBy({ startDate, today, shelved: revising?.shelved ?? null })
   }
 
   async function writeWeek({

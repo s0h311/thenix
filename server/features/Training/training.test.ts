@@ -905,7 +905,11 @@ describe('a Revision leaves Settled Days alone', () => {
       throw new Error('the Revision was not offered')
     }
 
-    const settled = settledBy({ startDate: offered.startDate, today: FRIDAY, held: offered.revising?.held ?? null })
+    const settled = settledBy({
+      startDate: offered.startDate,
+      today: FRIDAY,
+      shelved: offered.revising?.shelved ?? null,
+    })
 
     await training.importWeek({ userId: athlete, json: planB, startDate: offered.startDate, today: FRIDAY })
 

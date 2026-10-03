@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import { answerOf, wrote } from './importing.ts'
+import { answerOf, setAsideOf, wrote } from './importing.ts'
+import type { Revision } from '../../../shared/training.ts'
 
 const FAULT = { day: 1, exercise: 'dips', field: 'raw', message: 'could not be read' }
 
@@ -66,5 +67,80 @@ describe('what an import may have written', () => {
 
   test('an ended session wrote nothing either', () => {
     expect(wrote('signedOut')).toBe(false)
+  })
+})
+
+/** Day 5 of a Week starting Monday 2025-08-25. */
+const FRIDAY = '2025-08-29'
+
+/** Week 20 on the shelf from that Monday: seven Days, each asking for one Exercise, none of it logged. */
+const REVISING: Revision = {
+  startDate: '2025-08-25',
+  logged: 0,
+  shelved: [1, 2, 3, 4, 5, 6, 7].map((ordinal) => ({
+    ordinal,
+    kind: 'training',
+    asked: [{ optional: false, logged: false }],
+  })),
+}
+
+describe('what a Revision sets aside, as the Preview works it out', () => {
+  test('on day 5, a paste of Days 1–4 sets all four aside and still withdraws Days 5–7', () => {
+    const { setAside, withdrawing } = setAsideOf({
+      ordinals: [1, 2, 3, 4],
+      revising: REVISING,
+      startsOn: '2025-08-25',
+      today: FRIDAY,
+    })
+
+    expect(setAside).toEqual([1, 2, 3, 4])
+    expect(withdrawing).toBe(true)
+  })
+
+  test('leaving out only Days already behind the athlete withdraws nothing', () => {
+    const { setAside, withdrawing } = setAsideOf({
+      ordinals: [4, 5, 6, 7],
+      revising: REVISING,
+      startsOn: '2025-08-25',
+      today: FRIDAY,
+    })
+
+    expect(setAside).toEqual([4])
+    expect(withdrawing).toBe(false)
+  })
+
+  test('the Days set aside come back lowest first, whatever order the paste held them in', () => {
+    expect(
+      setAsideOf({ ordinals: [4, 1, 2, 3, 5, 6, 7], revising: REVISING, startsOn: '2025-08-25', today: FRIDAY })
+        .setAside,
+    ).toEqual([1, 2, 3, 4])
+  })
+
+  test('a first Import sets nothing aside and withdraws nothing', () => {
+    const { settled, setAside, withdrawing } = setAsideOf({
+      ordinals: [1, 2, 3],
+      revising: null,
+      startsOn: '2025-08-01',
+      today: FRIDAY,
+    })
+
+    expect(settled(1)).toBe(false)
+    expect(setAside).toEqual([])
+    expect(withdrawing).toBe(false)
+  })
+
+  test('a cleared start date on a Revision marks nothing and does not throw', () => {
+    for (const startsOn of ['', '2025-08', '2025-13-45']) {
+      const { settled, setAside, withdrawing } = setAsideOf({
+        ordinals: [1, 2, 3, 4],
+        revising: REVISING,
+        startsOn,
+        today: FRIDAY,
+      })
+
+      expect(settled(1)).toBe(false)
+      expect(setAside).toEqual([])
+      expect(withdrawing).toBe(false)
+    }
   })
 })

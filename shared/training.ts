@@ -4,8 +4,6 @@
  * these are the shapes that survive the round trip through the database.
  */
 
-import type { Held } from './settled.ts'
-
 export type Weekday = 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday'
 
 export type Range = {
@@ -133,6 +131,20 @@ export type WeekPreview = {
 }
 
 /**
+ * What the Day asks for, as done measures it. An Exercise a Revision dropped is never
+ * here: it is not asked for any more, and its Log is an Orphan — something recorded on
+ * the Day rather than something outstanding on it.
+ */
+export type Asked = { optional: boolean; logged: boolean }
+
+/**
+ * One Day of the Week already on the shelf, as far as the boundary needs it: how far
+ * it has been trained. Its date is not here — that comes from the start date being
+ * written, which the athlete can still change.
+ */
+export type ShelvedDay = { ordinal: number; kind: Day['kind']; asked: Asked[] }
+
+/**
  * The Week already on the shelf under the number the athlete just pasted. Confirming
  * revises that Week rather than adding one, so the preview names what is there: the
  * dates it is already being trained on, and everything recorded against it.
@@ -145,7 +157,7 @@ export type Revision = {
    * How far each of its Days has been trained — the one thing the Preview cannot
    * derive for itself when it marks which Days the Revision sets aside.
    */
-  held: Held[]
+  shelved: ShelvedDay[]
 }
 
 /**
