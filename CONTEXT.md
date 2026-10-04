@@ -46,6 +46,17 @@ when nothing was. Each is a shape as well as a fill: the marks are read at a gla
 one-handed, in daylight.
 _Avoid_: Session, date, workout
 
+**Settled**:
+A Day a Revision cannot reach: one whose date is behind the athlete's today, or that is
+today and done. Not the same as trained — a Day skipped entirely is Settled too, because
+the plan it was skipped against is part of what happened, and a Week that read plan B for
+a day the athlete never did would reach the coach as fiction. It binds the coach, not the
+athlete: the plan is frozen, the Logs are not, so last night's session is still logged
+this morning and a mistap is still corrected. Which Days are Settled is read from the
+athlete's date at the moment of writing, never the moment of the Preview, so a Preview
+left open overnight writes one Day fewer rather than overwriting yesterday.
+_Avoid_: Locked, frozen, closed, read-only, past
+
 **Focus**:
 A Day's headline, naming what it trains — "Upper Push + Core", "VO2max Run".
 
@@ -125,7 +136,10 @@ text that was pasted. Confirming is a second step, so a Week that read different
 from what the athlete expected is caught while the shelf is still untouched. It is
 also where the start date is picked — the day after the last Week ended, or the next
 Monday when there is none, because the coach writes no weekday at all. A Revision is
-the exception: it is offered the date its Week already runs on.
+the exception: it is offered the date its Week already runs on, and editing that date
+moves the Settled boundary on screen as it is typed. A Revision's Settled Days are
+shown as the app read them and marked as set aside rather than hidden, so a coach who
+rewrote a Day already trained is visible to the athlete instead of silently dropped.
 _Avoid_: Draft, dry run, staging
 
 **Revision**:
@@ -137,6 +151,15 @@ the wrong day — how far a re-dating would move it and that the Logs move with 
 Confirming a Revision says "Replace", never "Import": the athlete is overwriting a
 Week they may be halfway through. A Day or Exercise a Revision no longer asks for
 becomes an Orphan rather than a deletion.
+
+It reaches only the Days that are not Settled. A Settled Day is invisible to it: not
+replaced, not withdrawn when the paste omits it, and not created where the paste adds
+one behind the boundary — omission is the strongest edit there is, so a coach trimming
+the Week cannot erase a Day already behind the athlete. The Week's own prose and its
+start date are replaced regardless, so a Week whose every Day is Settled can still be
+re-dated or have its notes corrected even though no Day can change. Nothing is Settled
+on a Week number not yet on the shelf: an athlete importing on day five imports all
+seven Days, because there is no training yet for the boundary to protect.
 _Avoid_: Update, re-import as a second Week, correction
 
 **Export**:

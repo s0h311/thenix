@@ -1,4 +1,5 @@
-import type { ImportFault } from '../../../shared/training.ts'
+import { settledBy } from '../../../shared/settled.ts'
+import type { ImportFault, Revision } from '../../../shared/training.ts'
 
 /**
  * What came back from a paste, in the four answers it can actually be.
@@ -71,4 +72,42 @@ export type At = Answer<unknown>['at']
  */
 export function wrote(at: At): boolean {
   return at === 'read' || at === 'unreachable'
+}
+
+/**
+ * What confirming a paste would leave alone, worked out on the screen by the same rule
+ * the write goes through. `setAside` is the pasted Days the Revision cannot reach,
+ * lowest first; `withdrawing` is whether it takes away a Day the paste leaves out,
+ * because then not every Day stays as it was even when every pasted one does.
+ *
+ * A start date still being typed is no date at all, and marks nothing rather than
+ * asking the rule for the date of a Day in it.
+ */
+export function setAsideOf({
+  ordinals,
+  revising,
+  startsOn,
+  today,
+}: {
+  /** The ordinals of the pasted Days. */
+  ordinals: number[]
+  revising: Revision | null
+  startsOn: string
+  today: string
+}): { settled: (ordinal: number) => boolean; setAside: number[]; withdrawing: boolean } {
+  if (revising === null || !isDate(startsOn)) {
+    return { settled: () => false, setAside: [], withdrawing: false }
+  }
+
+  const settled = settledBy({ startDate: startsOn, today, shelved: revising.shelved })
+
+  return {
+    settled,
+    setAside: ordinals.filter(settled).toSorted((one, other) => one - other),
+    withdrawing: revising.shelved.some((day) => !ordinals.includes(day.ordinal) && !settled(day.ordinal)),
+  }
+}
+
+function isDate(date: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(date))
 }

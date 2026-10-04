@@ -148,6 +148,47 @@ export function asMoved({
   return `${moves} Its ${logs} ${revising.logged === 1 ? 'moves' : 'move'} with it.`
 }
 
+/**
+ * What a Revision leaves alone, said beside the date that decides it. In plain words:
+ * the athlete reads this one-handed in a gym and should not have to learn what the
+ * glossary calls these Days. The Days set aside always run from the start of the
+ * Week, because a Day is set aside by its date. Null when every Day takes the paste.
+ */
+export function asSetAside({
+  number,
+  setAside,
+  of,
+  withdrawing,
+}: {
+  number: number
+  /** The ordinals of the pasted Days the Revision cannot reach. */
+  setAside: number[]
+  /** How many Days the paste holds. */
+  of: number
+  /** Whether the Revision takes away a Day the paste leaves out. */
+  withdrawing: boolean
+}): string | null {
+  const sorted = setAside.toSorted((one, other) => one - other)
+  const first = sorted.at(0)
+  const last = sorted.at(-1)
+
+  if (first === undefined || last === undefined) {
+    return null
+  }
+
+  // Still confirmed: the Week's prose and its start date are replaced regardless. Not
+  // said while a Day the paste leaves out is being withdrawn — that Day does change.
+  if (setAside.length === of && !withdrawing) {
+    return `Every Day of Week ${number} is already behind you, so no Day will change. Only the Week’s notes and dates will.`
+  }
+
+  if (first === last) {
+    return `Day ${first} is already behind you, so it keeps the plan it had.`
+  }
+
+  return `Days ${first}${EN_DASH}${last} are already behind you, so they keep the plan they had.`
+}
+
 /** Both are ISO dates read at midnight UTC, so the difference is whole days. */
 function daysBetween({ from, to }: { from: string; to: string }): number {
   const A_DAY = 24 * 60 * 60 * 1000

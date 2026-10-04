@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 import { createTestDatabase } from '../../infrastructure/Database/testDatabase.ts'
 import { user } from '../../infrastructure/Database/schemas/auth.ts'
+import { settledBy } from '../../../shared/settled.ts'
 import { createTraining } from './createTraining.ts'
 import type { Database } from '../../infrastructure/Database/types.ts'
 import type { Day, DayOnShelf, Exercise, Week } from './types.ts'
@@ -13,6 +14,12 @@ import type { Day, DayOnShelf, Exercise, Week } from './types.ts'
  * rest Day finishes by the clock; tests that are not about that say so with this.
  */
 const AFTERWARDS = '2025-09-30'
+
+/**
+ * Long before every Week in these fixtures. A Revision cannot reach a Day already
+ * behind the athlete, so tests of what a Revision does to the plan revise from here.
+ */
+const BEFOREHAND = '2025-01-01'
 
 /** The coach's JSON, as it arrives on the clipboard. */
 function coachJson(week: number): string {
@@ -347,7 +354,7 @@ describe('importing the same Week number twice', () => {
 
     const revised = await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days[0].exercises[0].prescription.sets = 5
       }),
@@ -380,7 +387,7 @@ describe('importing the same Week number twice', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days[0].exercises[0].prescription.sets = 5
       }),
@@ -403,7 +410,7 @@ describe('importing the same Week number twice', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
       }),
@@ -430,7 +437,7 @@ describe('importing the same Week number twice', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
       }),
@@ -452,7 +459,7 @@ describe('importing the same Week number twice', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
       }),
@@ -479,8 +486,8 @@ describe('importing the same Week number twice', () => {
       week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
     })
 
-    await training.importWeek({ userId: athlete, today: AFTERWARDS, json: without, startDate: '2025-08-25' })
-    await training.importWeek({ userId: athlete, today: AFTERWARDS, json: coachJson(20), startDate: '2025-08-25' })
+    await training.importWeek({ userId: athlete, today: BEFOREHAND, json: without, startDate: '2025-08-25' })
+    await training.importWeek({ userId: athlete, today: BEFOREHAND, json: coachJson(20), startDate: '2025-08-25' })
 
     const day = dayIn(await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS }), 1)
 
@@ -503,7 +510,7 @@ describe('importing the same Week number twice', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days = week.days.filter((one: any) => one.ordinal !== 7)
       }),
@@ -525,7 +532,7 @@ describe('importing the same Week number twice', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days = week.days.filter((one: any) => one.ordinal !== 7)
       }),
@@ -545,7 +552,7 @@ describe('importing the same Week number twice', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days = week.days.filter((one: any) => one.ordinal !== 4)
       }),
@@ -570,7 +577,7 @@ describe('importing the same Week number twice', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days = week.days.filter((one: any) => one.ordinal !== 7)
       }),
@@ -593,7 +600,7 @@ describe('importing the same Week number twice', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days[3].notes = 'Full rest. Sleep.'
       }),
@@ -614,7 +621,7 @@ describe('importing the same Week number twice', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(9, (week) => {
         week.days[2].exercises.push({
           key: 'calf-raises',
@@ -645,7 +652,7 @@ describe('importing the same Week number twice', () => {
 
     const result = await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
         week.days[2].exercises[3].load.value = 'ten kilos'
@@ -688,6 +695,275 @@ describe('importing the same Week number twice', () => {
     expect(current?.week.number).toBe(12)
     expect(current?.day?.ordinal).toBe(3)
     expect(dayIn(current?.week ?? null, 1).date).toBe('2025-06-23')
+  })
+})
+
+describe('a Revision leaves Settled Days alone', () => {
+  /** Day 5 of Week 20, imported to start on Monday 2025-08-25. */
+  const FRIDAY = '2025-08-29'
+
+  /** Week 20 with every Day re-planned, so what took the Revision is plain to see. */
+  const planB = coachJsonWith(20, (week) => {
+    for (const one of week.days) {
+      one.focus = 'Plan B'
+    }
+  })
+
+  function focusOf(week: Week | null): (string | null)[] {
+    return week?.days.map((one) => one.focus) ?? []
+  }
+
+  test('a Revision on day 5 replaces days 5–7 and leaves days 1–4 as the earlier plan wrote them', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.importWeek({ userId: athlete, json: planB, startDate: '2025-08-25', today: FRIDAY })
+
+    expect(focusOf(await training.getWeek({ userId: athlete, number: 20, today: FRIDAY }))).toEqual([
+      'Upper Push + Core',
+      'VO2max',
+      'Lower Body',
+      'Full Rest',
+      'Plan B',
+      'Plan B',
+      'Plan B',
+    ])
+  })
+
+  test('a Revision on day 5 with day 5 done replaces days 6–7 only', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await logEvery({ training, athlete, number: 20, ordinal: 5, except: [] })
+    await training.importWeek({ userId: athlete, json: planB, startDate: '2025-08-25', today: FRIDAY })
+
+    expect(focusOf(await training.getWeek({ userId: athlete, number: 20, today: FRIDAY })).slice(4)).toEqual([
+      'Upper Pull + Core',
+      'Plan B',
+      'Plan B',
+    ])
+  })
+
+  test('today is done by the rule behind the done mark — a skip is logged, and Optional work is not asked for', async () => {
+    const { training, athlete } = await openApp()
+    const sunday = '2025-08-31'
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.importWeek({
+      userId: athlete,
+      json: coachJsonWith(20, (week) => {
+        // Day 7 asks for one thing, and the athlete skips it.
+        week.days[6].exercises[0].optional = false
+      }),
+      startDate: '2025-08-25',
+      today: BEFOREHAND,
+    })
+    await training.logExercise({
+      userId: athlete,
+      today: sunday,
+      weekNumber: 20,
+      dayOrdinal: 7,
+      exerciseKey: 'scapular-pulls',
+      log: { kind: 'skipped', note: null },
+    })
+    await training.importWeek({ userId: athlete, json: planB, startDate: '2025-08-25', today: sunday })
+
+    expect(dayIn(await training.getWeek({ userId: athlete, number: 20, today: sunday }), 7).focus).toBe(
+      'Active Recovery',
+    )
+  })
+
+  test('a paste that leaves out a Settled Day does not withdraw it — the Day is kept whole', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const before = dayIn(await training.getWeek({ userId: athlete, number: 20, today: FRIDAY }), 2)
+
+    await training.importWeek({
+      userId: athlete,
+      today: FRIDAY,
+      json: coachJsonWith(20, (week) => {
+        week.days = week.days.filter((one: any) => one.ordinal !== 2)
+      }),
+      startDate: '2025-08-25',
+    })
+
+    expect(dayIn(await training.getWeek({ userId: athlete, number: 20, today: FRIDAY }), 2)).toEqual(before)
+  })
+
+  test('a paste that adds a Day behind the boundary where none exists does not create it', async () => {
+    const { training, athlete } = await openApp()
+
+    await training.importWeek({
+      userId: athlete,
+      today: BEFOREHAND,
+      json: coachJsonWith(20, (week) => {
+        week.days = week.days.filter((one: any) => one.ordinal !== 2)
+      }),
+      startDate: '2025-08-25',
+    })
+    await training.importWeek({ userId: athlete, json: planB, startDate: '2025-08-25', today: FRIDAY })
+
+    const week = await training.getWeek({ userId: athlete, number: 20, today: FRIDAY })
+
+    expect(week?.days.map((one) => one.ordinal)).toEqual([1, 3, 4, 5, 6, 7])
+  })
+
+  test('a part-trained Day above the boundary takes the new plan, and a Log it no longer asks for is an Orphan', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.logExercise({
+      userId: athlete,
+      today: FRIDAY,
+      weekNumber: 20,
+      dayOrdinal: 5,
+      exerciseKey: 'negatives',
+      log: { kind: 'difficulty', difficulty: 'challenging', note: null },
+    })
+
+    await training.importWeek({
+      userId: athlete,
+      today: FRIDAY,
+      json: coachJsonWith(20, (week) => {
+        week.days[4].focus = 'Plan B'
+        week.days[4].exercises = week.days[4].exercises.filter((one: any) => one.key !== 'negatives')
+      }),
+      startDate: '2025-08-25',
+    })
+
+    const day = dayIn(await training.getWeek({ userId: athlete, number: 20, today: FRIDAY }), 5)
+
+    expect(day.focus).toBe('Plan B')
+    expect(day.orphans.map((one) => one.key)).toEqual(['negatives'])
+  })
+
+  test('a Revision of a Week whose every Day is Settled is accepted, and replaces its notes and start date', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const revised = await training.importWeek({
+      userId: athlete,
+      today: AFTERWARDS,
+      json: coachJsonWith(20, (week) => {
+        week.notes = 'Deload week.'
+        week.days[0].focus = 'Plan B'
+      }),
+      startDate: '2025-08-18',
+    })
+
+    const week = await training.getWeek({ userId: athlete, number: 20, today: AFTERWARDS })
+
+    expect(revised.ok).toBe(true)
+    expect([week?.notes, week?.startDate, dayIn(week, 1).focus]).toEqual([
+      'Deload week.',
+      '2025-08-18',
+      'Upper Push + Core',
+    ])
+  })
+
+  test('a first Import of a Week number not on the shelf writes every Day, those behind today included', async () => {
+    const { training, athlete } = await openApp()
+
+    await training.importWeek({ userId: athlete, json: planB, startDate: '2025-08-25', today: FRIDAY })
+
+    expect(focusOf(await training.getWeek({ userId: athlete, number: 20, today: FRIDAY }))).toEqual(
+      Array(7).fill('Plan B'),
+    )
+  })
+
+  test('the boundary is the date sent with the write — a Preview before midnight confirmed after writes one Day fewer', async () => {
+    const { training, athlete } = await openApp()
+    const thursday = '2025-08-28'
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+
+    const offered = await training.previewWeek({ userId: athlete, json: planB, today: thursday })
+
+    await training.importWeek({
+      userId: athlete,
+      json: planB,
+      startDate: offered.ok ? offered.startDate : 'never offered',
+      today: FRIDAY,
+    })
+
+    // Day 4 was today, and not done, when the Preview opened. By the confirm it is yesterday.
+    expect(dayIn(await training.getWeek({ userId: athlete, number: 20, today: FRIDAY }), 4).focus).toBe('Full Rest')
+  })
+
+  test('the Preview sets aside exactly the Days the write then leaves alone — one rule, not two', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await logEvery({ training, athlete, number: 20, ordinal: 5, except: [] })
+
+    const offered = await training.previewWeek({ userId: athlete, json: planB, today: FRIDAY })
+
+    if (!offered.ok) {
+      throw new Error('the Revision was not offered')
+    }
+
+    const settled = settledBy({
+      startDate: offered.startDate,
+      today: FRIDAY,
+      shelved: offered.revising?.shelved ?? null,
+    })
+
+    await training.importWeek({ userId: athlete, json: planB, startDate: offered.startDate, today: FRIDAY })
+
+    const kept = (await training.getWeek({ userId: athlete, number: 20, today: FRIDAY }))?.days
+      .filter((one) => one.focus !== 'Plan B')
+      .map((one) => one.ordinal)
+
+    expect([offered.preview.days.map((one) => one.ordinal).filter(settled), kept]).toEqual([
+      [1, 2, 3, 4, 5],
+      [1, 2, 3, 4, 5],
+    ])
+  })
+
+  test('a Settled Day is still logged — Settled binds the coach, not the athlete', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.importWeek({ userId: athlete, json: planB, startDate: '2025-08-25', today: FRIDAY })
+
+    const day = await training.logExercise({
+      userId: athlete,
+      today: FRIDAY,
+      weekNumber: 20,
+      dayOrdinal: 1,
+      exerciseKey: 'dips',
+      log: { kind: 'skipped', note: 'trained it yesterday, logged it today' },
+    })
+
+    expect(day?.exercises.find((one) => one.key === 'dips')?.log).toEqual({
+      kind: 'skipped',
+      note: 'trained it yesterday, logged it today',
+    })
+  })
+
+  test('a Movement named only on a Settled Day is still registered', async () => {
+    const { training, athlete } = await openApp()
+
+    await importedWeek({ training, athlete, number: 20, startDate: '2025-08-25' })
+    await training.importWeek({
+      userId: athlete,
+      today: FRIDAY,
+      json: coachJsonWith(20, (week) => {
+        week.days[0].exercises.push({
+          key: 'ring-rows',
+          movementId: 'ring-row',
+          name: 'Ring rows',
+          prescription: { kind: 'reps', sets: 3, reps: { min: 8, max: 8 } },
+          raw: 'Ring rows: 3×8.',
+        })
+      }),
+      startDate: '2025-08-25',
+    })
+
+    expect(JSON.parse(await training.exportRegistry()).movementIds).toContain('ring-row')
   })
 })
 
@@ -790,7 +1066,7 @@ describe('a Week the coach got wrong', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days[4].ordinal = 1
       }),
@@ -847,7 +1123,7 @@ describe('a Week the coach got wrong', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days[0].exercises[0].prescription.sets = 'four'
       }),
@@ -937,7 +1213,7 @@ describe('previewing the Week before it is saved', () => {
 
     const result = await training.previewWeek({ userId: athlete, json: coachJson(12), today: AFTERWARDS })
 
-    expect(result.ok ? result.revising : null).toEqual({ startDate: '2025-06-26', logged: 2 })
+    expect(result.ok ? result.revising : null).toMatchObject({ startDate: '2025-06-26', logged: 2 })
   })
 
   test('a Week the athlete has never imported is not a revision of anything', async () => {
@@ -1561,7 +1837,7 @@ describe('handing the Week back to the coach', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       startDate: '2025-08-25',
       json: coachJsonWith(20, (week) => {
         week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
@@ -1718,7 +1994,7 @@ describe('the shelf', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days[0].exercises = week.days[0].exercises.filter((one: any) => one.key !== 'dips')
       }),
@@ -1768,7 +2044,7 @@ describe('the shelf', () => {
 
     await training.importWeek({
       userId: athlete,
-      today: AFTERWARDS,
+      today: BEFOREHAND,
       json: coachJsonWith(20, (week) => {
         week.days = week.days.filter((one: any) => one.ordinal !== 4)
       }),
