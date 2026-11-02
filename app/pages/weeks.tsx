@@ -150,7 +150,6 @@ function OpenedWeek({ number }: { number: number }) {
           // The Week being trained opens on today; a Week off the shelf holds no
           // today, and opens on its first Day — its plan and its Logs, no tap first.
           day={standing.it.found.days.find((day) => day.date === today()) ?? null}
-          refresh='week'
         />
       )}
     </div>

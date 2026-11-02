@@ -30,6 +30,13 @@ self.addEventListener('install', (event) => {
   )
 })
 
+// The athlete tapped Reload: the only way a new worker stops waiting while pages are open.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    void self.skipWaiting()
+  }
+})
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches

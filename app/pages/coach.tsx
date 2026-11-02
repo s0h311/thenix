@@ -12,7 +12,7 @@ import { TextArea } from '../components/UI/Field.tsx'
 import { today } from '../libs/Training/clock.ts'
 import { copyRegistry, copySchema, copyWeek } from '../libs/Training/export.ts'
 import { answerOf, wrote } from '../libs/Training/importing.ts'
-import { openShelf, shelfKey } from '../libs/Training/shelf.ts'
+import { WEEK_READS, openShelf, shelfKey } from '../libs/Training/shelf.ts'
 import type { ImportFault, Revision, WeekPreview } from '../../shared/training.ts'
 
 export const Route = createFileRoute('/coach')({
@@ -101,13 +101,6 @@ function CoachPage() {
     </div>
   )
 }
-
-/**
- * Every read the app makes about Weeks, by the head of its key. An import does not
- * add a Week so much as rewrite the plan, so one landing makes all of them old at
- * once — and the Shelf is read on this very screen, one section down.
- */
-const WEEK_READS = ['shelf', 'currentDay', 'week']
 
 /** One direction: a Week arriving as JSON, read back before anything is written. */
 function FromYourCoach() {

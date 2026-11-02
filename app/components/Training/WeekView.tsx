@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { CopyButton } from './CopyButton.tsx'
-import { BottomBar } from '../UI/BottomBar.tsx'
 import { Button } from '../UI/Button.tsx'
 import { Card } from '../UI/Card.tsx'
 import { Chip } from '../UI/Chip.tsx'
@@ -14,7 +13,6 @@ import { pillsOf } from '../../libs/Training/pills.ts'
 import type { Logged, Noted, Taps } from '../../libs/Training/logging.ts'
 import type { Picked } from '../../libs/Training/opening.ts'
 import type { Pill } from '../../libs/Training/pills.ts'
-import type { Alert } from '../../libs/Training/saving.ts'
 import type { ChangeEvent, MouseEvent, ReactNode } from 'react'
 import type { Day, Difficulty, Exercise, Log, Orphan, Week } from '../../../shared/training.ts'
 
@@ -34,23 +32,12 @@ export function WeekView({
   day,
   onLog,
   onNote,
-  bar,
-  onRetry,
-  onDismiss,
-  onReload,
   onExport,
 }: {
   week: Week
   day: Day | null
   onLog: (entry: Logged) => void
   onNote: (entry: Noted) => void
-  /** What the bar at the foot of the screen says, or null while there is no bar. */
-  bar: Alert | null
-  onRetry: () => void
-  /** Lets go of the Saves the server will not take, which nothing else can clear. */
-  onDismiss: () => void
-  /** Moves to the new version waiting to take over. */
-  onReload: () => void
   /** Puts this Week, Logs and all, where the coach can be handed it. */
   onExport: () => Promise<void>
 }) {
@@ -104,52 +91,7 @@ export function WeekView({
       <WeekNotes notes={week.notes} />
 
       <Export onExport={onExport} />
-
-      <Bar
-        bar={bar}
-        onRetry={onRetry}
-        onDismiss={onDismiss}
-        onReload={onReload}
-      />
     </div>
-  )
-}
-
-/**
- * The one thing the screen must say out loud. A tap stays on screen the moment it
- * happens, which is right — and is also why a Log the server never got would sit
- * there looking recorded. The gym has no signal, the session ends, the Week goes to
- * the coach short. So it is said plainly and sending it again is a tap: nothing is
- * asked of the athlete mid-set beyond one they can ignore till later.
- *
- * The one button is whatever the alert says it is. A Save the server will not take
- * is not an errand — sending it again only spends the tap — so there the button lets
- * it go, and the bar can be cleared rather than pinned here for the session.
- */
-function Bar({
-  bar,
-  onRetry,
-  onDismiss,
-  onReload,
-}: {
-  bar: Alert | null
-  onRetry: () => void
-  onDismiss: () => void
-  onReload: () => void
-}) {
-  if (bar === null) {
-    return null
-  }
-
-  const acts = { retry: onRetry, dismiss: onDismiss, reload: onReload }
-
-  return (
-    <BottomBar
-      tone={bar.does === 'reload' ? 'neutral' : 'warning'}
-      said={bar.said}
-      action={bar.action}
-      onAct={acts[bar.does]}
-    />
   )
 }
 

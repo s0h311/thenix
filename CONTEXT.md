@@ -110,7 +110,8 @@ set as recorded when nothing reached the server — a basement gym has no signal
 Week goes to the coach short. It is named on screen instead, and sending everything
 held is one tap. It belongs to the phone rather than to any one Week — it is still
 named after another Week is opened, and each held Log carries the Week it was recorded
-against, so sending it later writes it home. It lives only as long as the screen does.
+against, so sending it later writes it home. It survives moving between
+screens, signing in included, and lives only until the app reloads or closes.
 _Avoid_: Pending, failed, offline
 
 **Orphan**:

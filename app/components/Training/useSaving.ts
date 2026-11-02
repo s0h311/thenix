@@ -1,8 +1,11 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query'
+import { createContext, useContext, useState } from 'react'
 import { sendSave } from '../../libs/Training/log.ts'
 import { bottomBar, dismissed, held, landed, movedOn, nothingUnsaved, unsaved } from '../../libs/Training/saving.ts'
-import type { Logged, Noted } from '../../libs/Training/logging.ts'
+import { WEEK_READS } from '../../libs/Training/shelf.ts'
+import type { Save } from '../../libs/Training/saving.ts'
+
+const SAVE_KEY = ['save']
 
 /**
  * Logging, and what becomes of a Log the server never gets. The tap is the save and
@@ -11,12 +14,19 @@ import type { Logged, Noted } from '../../libs/Training/logging.ts'
  * A Save that does not land is held and said out loud, and trying again is one tap.
  * Why it did not land is held with it, because "check your connection" is no help to
  * an athlete who was signed out, and no help at all against a Save no retry can fix.
+ *
+ * Call it once, above the routes. The outbox is the phone's and not any screen's, so it
+ * has to outlive them all: the bar shows everywhere, and Unsaved Logs survive the trip
+ * to `/sign-in` and back. It is held in memory only, so a reload still loses it.
  */
-export function useSaving({ weekNumber, refresh }: { weekNumber: number; refresh: string }) {
+export function useSaving({ updateWaiting }: { updateWaiting: boolean }) {
   const queryClient = useQueryClient()
   const [outbox, setOutbox] = useState(nothingUnsaved)
+  // On its way is not in the outbox yet, and a reload would drop it just the same.
+  const sending = useIsMutating({ mutationKey: SAVE_KEY }) > 0
 
   const { mutate } = useMutation({
+    mutationKey: SAVE_KEY,
     mutationFn: sendSave,
     // One answer, four outcomes: `sendSave` does not throw, because what stopped a
     // Save is exactly what the athlete is told and what the bar's one button does.
@@ -27,24 +37,31 @@ export function useSaving({ weekNumber, refresh }: { weekNumber: number; refresh
       // reached it is not a reason to go asking again: that read fails too, and a
       // failed read is what replaces the Day the athlete is mid-set on.
       if (movedOn(landing)) {
-        void queryClient.invalidateQueries({ queryKey: [refresh] })
-        // And the Shelf, whose per-Day marks are these same Logs counted a level up:
-        // a Day trained off the shelf came back untouched on the way out of it.
-        void queryClient.invalidateQueries({ queryKey: ['shelf'] })
+        // All of them: a Save held since another Week was open lands from any screen.
+        WEEK_READS.forEach((read) => void queryClient.invalidateQueries({ queryKey: [read] }))
       }
     },
   })
 
   return {
-    record: (entry: Logged) => mutate({ weekNumber, kind: 'log', entry }),
-    note: (entry: Noted) => mutate({ weekNumber, kind: 'note', entry }),
-    // Nothing watches for a new version yet, so no update is ever waiting.
-    bar: bottomBar({ outbox, updateWaiting: false }),
+    save: (save: Save) => mutate(save),
+    bar: bottomBar({ outbox, updateWaiting, sending }),
     /** Everything still worth sending, sent again — one tap for a whole session's worth. */
     retry: () => unsaved(outbox).forEach((save) => mutate(save)),
     /** The Saves the server will not take, let go of: the only way the bar clears. */
     dismiss: () => setOutbox(dismissed),
-    /** Unreachable until an update can be waiting: nothing offers it before then. */
-    reload: () => {},
   }
+}
+
+/** How a screen hands over a Save. The answer to it is the bar's business, not the screen's. */
+export const SaveContext = createContext<((save: Save) => void) | null>(null)
+
+export function useSave(): (save: Save) => void {
+  const save = useContext(SaveContext)
+
+  if (save === null) {
+    throw new Error('useSave needs SaveContext, which the root route provides')
+  }
+
+  return save
 }

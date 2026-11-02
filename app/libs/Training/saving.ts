@@ -174,8 +174,17 @@ const UPDATE_ALERT: Alert = { said: 'A new version of thenix is ready.', action:
  * phone, so the offer waits until nothing is, and surfaces by itself the moment the
  * last Log lands. The update is told apart by what it does, not by a second bar.
  */
-export function bottomBar({ outbox, updateWaiting }: { outbox: Outbox; updateWaiting: boolean }): Alert | null {
-  return unsavedAlert(outbox) ?? (updateWaiting ? UPDATE_ALERT : null)
+export function bottomBar({
+  outbox,
+  updateWaiting,
+  sending,
+}: {
+  outbox: Outbox
+  updateWaiting: boolean
+  /** A Save is on its way, answered by nothing yet: not Unsaved, and just as lost by a reload. */
+  sending: boolean
+}): Alert | null {
+  return unsavedAlert(outbox) ?? (updateWaiting && !sending ? UPDATE_ALERT : null)
 }
 
 function targetOf(save: Save): string {
