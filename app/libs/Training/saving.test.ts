@@ -219,7 +219,7 @@ describe('what a Save means for reading the Week back', () => {
 
 describe('what the bar at the foot of the screen shows', () => {
   test('with nothing Unsaved and an update waiting, it offers the new version with Reload', () => {
-    expect(bottomBar({ outbox: nothingUnsaved, updateWaiting: true })).toEqual({
+    expect(bottomBar({ outbox: nothingUnsaved, updateWaiting: true, sending: false })).toEqual({
       said: 'A new version of thenix is ready.',
       action: 'Reload',
       does: 'reload',
@@ -227,7 +227,9 @@ describe('what the bar at the foot of the screen shows', () => {
   })
 
   test('with Unsaved Logs and an update waiting, it stays the Unsaved alert, so a reload cannot lose one', () => {
-    expect(bottomBar({ outbox: held(nothingUnsaved, { save: tap(), why: 'held' }), updateWaiting: true })).toEqual({
+    expect(
+      bottomBar({ outbox: held(nothingUnsaved, { save: tap(), why: 'held' }), updateWaiting: true, sending: false }),
+    ).toEqual({
       said: '1 Log is still on this phone. Check your connection.',
       action: 'Save it now',
       does: 'retry',
@@ -236,17 +238,49 @@ describe('what the bar at the foot of the screen shows', () => {
 
   test('a refused Log not yet let go of still holds the update back, so the athlete reads it first', () => {
     expect(
-      bottomBar({ outbox: held(nothingUnsaved, { save: tap(), why: 'refused' }), updateWaiting: true })?.does,
+      bottomBar({ outbox: held(nothingUnsaved, { save: tap(), why: 'refused' }), updateWaiting: true, sending: false })
+        ?.does,
     ).toBe('dismiss')
   })
 
   test('with nothing Unsaved and no update, there is no bar', () => {
-    expect(bottomBar({ outbox: nothingUnsaved, updateWaiting: false })).toBeNull()
+    expect(bottomBar({ outbox: nothingUnsaved, updateWaiting: false, sending: false })).toBeNull()
   })
 
   test('once the last Unsaved Log lands, the waiting update surfaces', () => {
     const outbox = landed(held(nothingUnsaved, { save: tap(), why: 'held' }), tap())
 
-    expect(bottomBar({ outbox, updateWaiting: true })?.does).toBe('reload')
+    expect(bottomBar({ outbox, updateWaiting: true, sending: false })?.does).toBe('reload')
+  })
+
+  test('with a Log still on its way, the update waits too: it is on no server yet and a reload would drop it', () => {
+    expect(bottomBar({ outbox: nothingUnsaved, updateWaiting: true, sending: true })).toBeNull()
+  })
+
+  test('a Log on its way does not hide the Unsaved alert, which is about the ones that already stopped', () => {
+    const outbox = held(nothingUnsaved, { save: tap(), why: 'held' })
+
+    expect(bottomBar({ outbox, updateWaiting: true, sending: true })?.does).toBe('retry')
+  })
+})
+
+describe('being signed out mid-training, and signing back in', () => {
+  const signedOut = held(held(nothingUnsaved, { save: tap(), why: 'signedOut' }), { save: dayNote(), why: 'signedOut' })
+
+  test('a Save sent again before signing in is still held, and still says to sign in', () => {
+    const again = held(signedOut, { save: tap(), why: 'signedOut' })
+
+    expect(unsaved(again)).toEqual([tap(), dayNote()])
+    expect(unsavedAlert(again)?.said).toBe(
+      '2 Logs are still on this phone. You were signed out — sign in again, then save them.',
+    )
+  })
+
+  test('once signed in, the one button sends every Log, and when they land a waiting update surfaces', () => {
+    expect(bottomBar({ outbox: signedOut, updateWaiting: true, sending: false })?.does).toBe('retry')
+
+    const settled = unsaved(signedOut).reduce(landed, signedOut)
+
+    expect(bottomBar({ outbox: settled, updateWaiting: true, sending: false })?.does).toBe('reload')
   })
 })

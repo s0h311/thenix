@@ -2,6 +2,12 @@ import { today } from './clock.ts'
 import type { WeekOnShelf } from '../../../shared/training.ts'
 
 /**
+ * Every read the app makes about Weeks, by the head of its key. An import rewrites the
+ * plan and a Save can land from any screen, so either makes all of them old at once.
+ */
+export const WEEK_READS = ['shelf', 'currentDay', 'week']
+
+/**
  * The key the Shelf is cached under. `'shelf'` heads it because that is what
  * `useSaving` invalidates by prefix after a Log lands.
  */

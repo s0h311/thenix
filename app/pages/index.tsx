@@ -81,7 +81,6 @@ function HomePage() {
     <TrainingWeek
       week={standing.it.current.week}
       day={standing.it.current.day}
-      refresh='currentDay'
     />
   )
 }
