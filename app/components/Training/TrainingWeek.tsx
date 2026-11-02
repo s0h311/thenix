@@ -9,7 +9,7 @@ import type { Day, Week } from '../../../shared/training.ts'
  * is logged exactly as today's is, so only where the Day came from differs.
  */
 export function TrainingWeek({ week, day, refresh }: { week: Week; day: Day | null; refresh: string }) {
-  const { record, note, unsaved, retry, dismiss } = useSaving({ weekNumber: week.number, refresh })
+  const { record, note, bar, retry, dismiss, reload } = useSaving({ weekNumber: week.number, refresh })
 
   return (
     <WeekView
@@ -23,9 +23,10 @@ export function TrainingWeek({ week, day, refresh }: { week: Week; day: Day | nu
       day={day}
       onLog={record}
       onNote={note}
-      unsaved={unsaved}
+      bar={bar}
       onRetry={retry}
       onDismiss={dismiss}
+      onReload={reload}
       onExport={() => copyWeek({ number: week.number })}
     />
   )
