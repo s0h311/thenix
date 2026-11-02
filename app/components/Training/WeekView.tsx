@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CopyButton } from './CopyButton.tsx'
+import { BottomBar } from '../UI/BottomBar.tsx'
 import { Button } from '../UI/Button.tsx'
 import { Card } from '../UI/Card.tsx'
 import { Chip } from '../UI/Chip.tsx'
@@ -33,20 +34,23 @@ export function WeekView({
   day,
   onLog,
   onNote,
-  unsaved,
+  bar,
   onRetry,
   onDismiss,
+  onReload,
   onExport,
 }: {
   week: Week
   day: Day | null
   onLog: (entry: Logged) => void
   onNote: (entry: Noted) => void
-  /** What is still on the phone, in words, or null while the server has it all. */
-  unsaved: Alert | null
+  /** What the bar at the foot of the screen says, or null while there is no bar. */
+  bar: Alert | null
   onRetry: () => void
   /** Lets go of the Saves the server will not take, which nothing else can clear. */
   onDismiss: () => void
+  /** Moves to the new version waiting to take over. */
+  onReload: () => void
   /** Puts this Week, Logs and all, where the coach can be handed it. */
   onExport: () => Promise<void>
 }) {
@@ -101,10 +105,11 @@ export function WeekView({
 
       <Export onExport={onExport} />
 
-      <Unsaved
-        unsaved={unsaved}
+      <Bar
+        bar={bar}
         onRetry={onRetry}
         onDismiss={onDismiss}
+        onReload={onReload}
       />
     </div>
   )
@@ -117,54 +122,34 @@ export function WeekView({
  * the coach short. So it is said plainly and sending it again is a tap: nothing is
  * asked of the athlete mid-set beyond one they can ignore till later.
  *
- * It pins directly above the tab bar rather than sitting above the Day, because a
- * Day is a long scroll and a warning at the top of it is a warning that is missed —
- * and because the foot of the screen is where the thumb already is.
- *
- * In the warning tokens, never the brand: the fault this replaces was an amber
- * block that read as the one thing on the screen to press.
- *
  * The one button is whatever the alert says it is. A Save the server will not take
  * is not an errand — sending it again only spends the tap — so there the button lets
  * it go, and the bar can be cleared rather than pinned here for the session.
  */
-function Unsaved({
-  unsaved,
+function Bar({
+  bar,
   onRetry,
   onDismiss,
+  onReload,
 }: {
-  unsaved: Alert | null
+  bar: Alert | null
   onRetry: () => void
   onDismiss: () => void
+  onReload: () => void
 }) {
-  if (unsaved === null) {
+  if (bar === null) {
     return null
   }
 
-  return (
-    <>
-      {/* The bar is out of the flow, so the foot of the screen is held clear of it:
-          the Export button beneath it is still reachable while it is up. */}
-      <div
-        aria-hidden='true'
-        className='h-20'
-      />
+  const acts = { retry: onRetry, dismiss: onDismiss, reload: onReload }
 
-      <div className='fixed inset-x-0 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] z-40 px-4 pb-2 md:bottom-0 md:pb-[calc(0.75rem_+_env(safe-area-inset-bottom))]'>
-        <section
-          role='alert'
-          className='mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border border-warning-line bg-warning-soft px-4 py-3 shadow-lg'
-        >
-          <p className='text-label font-semibold text-warning-ink'>{unsaved.said}</p>
-          <Button
-            tone='destructive'
-            onClick={unsaved.does === 'retry' ? onRetry : onDismiss}
-          >
-            {unsaved.action}
-          </Button>
-        </section>
-      </div>
-    </>
+  return (
+    <BottomBar
+      tone={bar.does === 'reload' ? 'neutral' : 'warning'}
+      said={bar.said}
+      action={bar.action}
+      onAct={acts[bar.does]}
+    />
   )
 }
 

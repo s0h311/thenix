@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { sendSave } from '../../libs/Training/log.ts'
-import { dismissed, held, landed, movedOn, nothingUnsaved, unsaved, unsavedAlert } from '../../libs/Training/saving.ts'
+import { bottomBar, dismissed, held, landed, movedOn, nothingUnsaved, unsaved } from '../../libs/Training/saving.ts'
 import type { Logged, Noted } from '../../libs/Training/logging.ts'
 
 /**
@@ -38,10 +38,13 @@ export function useSaving({ weekNumber, refresh }: { weekNumber: number; refresh
   return {
     record: (entry: Logged) => mutate({ weekNumber, kind: 'log', entry }),
     note: (entry: Noted) => mutate({ weekNumber, kind: 'note', entry }),
-    unsaved: unsavedAlert(outbox),
+    // Nothing watches for a new version yet, so no update is ever waiting.
+    bar: bottomBar({ outbox, updateWaiting: false }),
     /** Everything still worth sending, sent again — one tap for a whole session's worth. */
     retry: () => unsaved(outbox).forEach((save) => mutate(save)),
     /** The Saves the server will not take, let go of: the only way the bar clears. */
     dismiss: () => setOutbox(dismissed),
+    /** Unreachable until an update can be waiting: nothing offers it before then. */
+    reload: () => {},
   }
 }
