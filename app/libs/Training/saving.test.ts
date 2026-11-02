@@ -1,5 +1,15 @@
 import { describe, expect, test } from 'vitest'
-import { dismissed, held, landed, landingOf, movedOn, nothingUnsaved, unsaved, unsavedAlert } from './saving.ts'
+import {
+  bottomBar,
+  dismissed,
+  held,
+  landed,
+  landingOf,
+  movedOn,
+  nothingUnsaved,
+  unsaved,
+  unsavedAlert,
+} from './saving.ts'
 import type { Save } from './saving.ts'
 import type { Difficulty } from '../../../shared/training.ts'
 
@@ -204,5 +214,39 @@ describe('what a Save means for reading the Week back', () => {
 
   test('being signed out moved nothing, and asking again only asks who is asking', () => {
     expect(movedOn('signedOut')).toBe(false)
+  })
+})
+
+describe('what the bar at the foot of the screen shows', () => {
+  test('with nothing Unsaved and an update waiting, it offers the new version with Reload', () => {
+    expect(bottomBar({ outbox: nothingUnsaved, updateWaiting: true })).toEqual({
+      said: 'A new version of thenix is ready.',
+      action: 'Reload',
+      does: 'reload',
+    })
+  })
+
+  test('with Unsaved Logs and an update waiting, it stays the Unsaved alert, so a reload cannot lose one', () => {
+    expect(bottomBar({ outbox: held(nothingUnsaved, { save: tap(), why: 'held' }), updateWaiting: true })).toEqual({
+      said: '1 Log is still on this phone. Check your connection.',
+      action: 'Save it now',
+      does: 'retry',
+    })
+  })
+
+  test('a refused Log not yet let go of still holds the update back, so the athlete reads it first', () => {
+    expect(
+      bottomBar({ outbox: held(nothingUnsaved, { save: tap(), why: 'refused' }), updateWaiting: true })?.does,
+    ).toBe('dismiss')
+  })
+
+  test('with nothing Unsaved and no update, there is no bar', () => {
+    expect(bottomBar({ outbox: nothingUnsaved, updateWaiting: false })).toBeNull()
+  })
+
+  test('once the last Unsaved Log lands, the waiting update surfaces', () => {
+    const outbox = landed(held(nothingUnsaved, { save: tap(), why: 'held' }), tap())
+
+    expect(bottomBar({ outbox, updateWaiting: true })?.does).toBe('reload')
   })
 })

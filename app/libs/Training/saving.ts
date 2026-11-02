@@ -118,7 +118,7 @@ export function dismissed(outbox: Outbox): Outbox {
 }
 
 /** The warning bar, in words: what is held, and what the one button does about it. */
-export type Alert = Readonly<{ said: string; action: string; does: 'retry' | 'dismiss' }>
+export type Alert = Readonly<{ said: string; action: string; does: 'retry' | 'dismiss' | 'reload' }>
 
 /**
  * What the screen says while a Log is held, and nothing at all while none is. It
@@ -164,6 +164,18 @@ export function unsavedAlert(outbox: Outbox): Alert | null {
     action: one ? 'Dismiss it' : 'Dismiss them',
     does: 'dismiss',
   }
+}
+
+const UPDATE_ALERT: Alert = { said: 'A new version of thenix is ready.', action: 'Reload', does: 'reload' }
+
+/**
+ * The one bar at the foot of the screen, and which alert it is. Unsaved comes first
+ * and the update is never chosen beside it: a reload loses whatever is only on this
+ * phone, so the offer waits until nothing is, and surfaces by itself the moment the
+ * last Log lands. The update is told apart by what it does, not by a second bar.
+ */
+export function bottomBar({ outbox, updateWaiting }: { outbox: Outbox; updateWaiting: boolean }): Alert | null {
+  return unsavedAlert(outbox) ?? (updateWaiting ? UPDATE_ALERT : null)
 }
 
 function targetOf(save: Save): string {
