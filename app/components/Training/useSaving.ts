@@ -1,7 +1,7 @@
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useRef, useState } from 'react'
 import { sendSave } from '../../libs/Training/log.ts'
-import { bottomBar, dismissed, held, landed, movedOn, nothingUnsaved, unsaved } from '../../libs/Training/saving.ts'
+import { answeredSave, chooseAlert, dismissed, movedOn, nothingUnsaved, unsaved } from '../../libs/Training/saving.ts'
 import { WEEK_READS } from '../../libs/Training/shelf.ts'
 import type { Save } from '../../libs/Training/saving.ts'
 
@@ -18,20 +18,32 @@ const SAVE_KEY = ['save']
  * Call it once, above the routes. The outbox is the phone's and not any screen's, so it
  * has to outlive them all: the bar shows everywhere, and Unsaved Logs survive the trip
  * to `/sign-in` and back. It is held in memory only, so a reload still loses it.
+ *
+ * The one thing it must not outlive is the athlete choosing to leave: `forgetUnsaved` is
+ * for signing out and deleting the account, because the next email to sign in on this
+ * phone would otherwise save these Logs to its own account. Being signed out by the
+ * server never calls it, and those Logs wait for the same athlete to come back.
  */
 export function useSaving({ updateWaiting }: { updateWaiting: boolean }) {
   const queryClient = useQueryClient()
   const [outbox, setOutbox] = useState(nothingUnsaved)
   // On its way is not in the outbox yet, and a reload would drop it just the same.
   const sending = useIsMutating({ mutationKey: SAVE_KEY }) > 0
+  // Counts the athlete leaving, so an answer can tell it was sent before they left.
+  const departures = useRef(0)
 
   const { mutate } = useMutation({
     mutationKey: SAVE_KEY,
-    mutationFn: sendSave,
+    mutationFn: async (save: Save) => {
+      const departuresWhenSent = departures.current
+      const landing = await sendSave(save)
+
+      return { landing, athleteLeft: departuresWhenSent !== departures.current }
+    },
     // One answer, four outcomes: `sendSave` does not throw, because what stopped a
     // Save is exactly what the athlete is told and what the bar's one button does.
-    onSuccess: (landing, save) => {
-      setOutbox((current) => (landing === 'landed' ? landed(current, save) : held(current, { save, why: landing })))
+    onSuccess: ({ landing, athleteLeft }, save) => {
+      setOutbox((current) => answeredSave(current, { save, landing, athleteLeft }))
 
       // Only once the server has spoken about the Save itself. A Save that never
       // reached it is not a reason to go asking again: that read fails too, and a
@@ -45,16 +57,34 @@ export function useSaving({ updateWaiting }: { updateWaiting: boolean }) {
 
   return {
     save: (save: Save) => mutate(save),
-    bar: bottomBar({ outbox, updateWaiting, sending }),
-    /** Everything still worth sending, sent again — one tap for a whole session's worth. */
+    alert: chooseAlert({ outbox, updateWaiting, sending }),
+    /** Everything still worth sending, sent again — one tap for a whole Day's worth. */
     retry: () => unsaved(outbox).forEach((save) => mutate(save)),
     /** The Saves the server will not take, let go of: the only way the bar clears. */
     dismiss: () => setOutbox(dismissed),
+    /** The athlete chose to leave, so nothing here may reach the next account. */
+    forgetUnsaved: () => {
+      departures.current += 1
+      setOutbox(nothingUnsaved)
+    },
   }
 }
 
 /** How a screen hands over a Save. The answer to it is the bar's business, not the screen's. */
 export const SaveContext = createContext<((save: Save) => void) | null>(null)
+
+/** How signing out and deleting the account let go of what is Unsaved. */
+export const ForgetUnsavedContext = createContext<(() => void) | null>(null)
+
+export function useForgetUnsaved(): () => void {
+  const forgetUnsaved = useContext(ForgetUnsavedContext)
+
+  if (forgetUnsaved === null) {
+    throw new Error('useForgetUnsaved needs ForgetUnsavedContext, which the root route provides')
+  }
+
+  return forgetUnsaved
+}
 
 export function useSave(): (save: Save) => void {
   const save = useContext(SaveContext)

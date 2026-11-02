@@ -33,6 +33,14 @@ are served from the precache.
 `/sw.js` is served with `cache-control: no-cache` so browsers revalidate it. The reverse proxy must
 not override that.
 
+## Reload has two signals
+
+The spec's Reload posts `SKIP_WAITING` and reloads on `controllerchange`. Reload also fires when the
+waiting worker reaches `activated`, whichever comes first, and only once. The worker never claims
+clients, so a page no worker controls, such as the page of a first visit, never gets
+`controllerchange`. With that signal alone, Reload would do nothing on that page. Do not remove the
+second signal as redundant, because it only shows on an uncontrolled page.
+
 ## When to revisit
 
 Move to unplugin-pwa once it ships with a Nitro integration.

@@ -111,7 +111,9 @@ Week goes to the coach short. It is named on screen instead, and sending everyth
 held is one tap. It belongs to the phone rather than to any one Week — it is still
 named after another Week is opened, and each held Log carries the Week it was recorded
 against, so sending it later writes it home. It survives moving between
-screens, signing in included, and lives only until the app reloads or closes.
+screens, signing in included, and lives only until the app reloads or closes. Being
+signed out by the server keeps it for signing back in. Signing out on purpose or deleting
+the account lets it go, so another email signing in on this phone can never save it.
 _Avoid_: Pending, failed, offline
 
 **Orphan**:
@@ -139,6 +141,16 @@ The athlete not being known to the server, whether they signed out themselves or
 out. It is what the screen says when that stops a read or a Save. "Session" is avoided in UI
 and domain language, because it is already a synonym to avoid for **Day**.
 _Avoid_: Session ended, logged out, expired
+
+### The app itself
+
+**New release**:
+A build of thenix deployed since this page loaded, installed on the phone and waiting for the
+athlete to tap Reload. It is about the app and never about training: a Week changing is a
+**Revision**, and a Movement changing is a **Variant**. The screen says "A new version of thenix",
+the one place that word appears, and the code's `useUpdate` and `UPDATE_ALERT` name offering it.
+It is never offered while anything is **Unsaved**, because a reload would lose it.
+_Avoid_: Revision, Variant, deploy
 
 ### Moving data
 

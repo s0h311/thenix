@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { Button, buttonClasses } from '../components/UI/Button.tsx'
 import { Card } from '../components/UI/Card.tsx'
+import { useForgetUnsaved } from '../components/Training/useSaving.ts'
 import { authClient } from '../libs/Auth/authClient.ts'
 
 export const Route = createFileRoute('/account')({
@@ -10,12 +11,19 @@ export const Route = createFileRoute('/account')({
 
 function AccountPage() {
   const router = useRouter()
+  const forgetUnsaved = useForgetUnsaved()
   const { data: session, isPending } = authClient.useSession()
   const [busy, setBusy] = useState(false)
 
   async function signOut() {
     setBusy(true)
-    await authClient.signOut()
+    const { error } = await authClient.signOut()
+
+    // Only once it happened: a sign-out that failed leaves the same athlete signed in.
+    if (error === null) {
+      forgetUnsaved()
+    }
+
     await router.navigate({ to: '/sign-in' })
   }
 
@@ -25,7 +33,12 @@ function AccountPage() {
     }
 
     setBusy(true)
-    await authClient.deleteUser()
+    const { error } = await authClient.deleteUser()
+
+    if (error === null) {
+      forgetUnsaved()
+    }
+
     await router.navigate({ to: '/sign-in' })
   }
 

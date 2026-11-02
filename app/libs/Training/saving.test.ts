@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
-  bottomBar,
+  answeredSave,
+  chooseAlert,
   dismissed,
   held,
   landed,
@@ -219,7 +220,7 @@ describe('what a Save means for reading the Week back', () => {
 
 describe('what the bar at the foot of the screen shows', () => {
   test('with nothing Unsaved and an update waiting, it offers the new version with Reload', () => {
-    expect(bottomBar({ outbox: nothingUnsaved, updateWaiting: true, sending: false })).toEqual({
+    expect(chooseAlert({ outbox: nothingUnsaved, updateWaiting: true, sending: false })).toEqual({
       said: 'A new version of thenix is ready.',
       action: 'Reload',
       does: 'reload',
@@ -228,7 +229,7 @@ describe('what the bar at the foot of the screen shows', () => {
 
   test('with Unsaved Logs and an update waiting, it stays the Unsaved alert, so a reload cannot lose one', () => {
     expect(
-      bottomBar({ outbox: held(nothingUnsaved, { save: tap(), why: 'held' }), updateWaiting: true, sending: false }),
+      chooseAlert({ outbox: held(nothingUnsaved, { save: tap(), why: 'held' }), updateWaiting: true, sending: false }),
     ).toEqual({
       said: '1 Log is still on this phone. Check your connection.',
       action: 'Save it now',
@@ -238,29 +239,58 @@ describe('what the bar at the foot of the screen shows', () => {
 
   test('a refused Log not yet let go of still holds the update back, so the athlete reads it first', () => {
     expect(
-      bottomBar({ outbox: held(nothingUnsaved, { save: tap(), why: 'refused' }), updateWaiting: true, sending: false })
-        ?.does,
+      chooseAlert({
+        outbox: held(nothingUnsaved, { save: tap(), why: 'refused' }),
+        updateWaiting: true,
+        sending: false,
+      })?.does,
     ).toBe('dismiss')
   })
 
   test('with nothing Unsaved and no update, there is no bar', () => {
-    expect(bottomBar({ outbox: nothingUnsaved, updateWaiting: false, sending: false })).toBeNull()
+    expect(chooseAlert({ outbox: nothingUnsaved, updateWaiting: false, sending: false })).toBeNull()
   })
 
   test('once the last Unsaved Log lands, the waiting update surfaces', () => {
     const outbox = landed(held(nothingUnsaved, { save: tap(), why: 'held' }), tap())
 
-    expect(bottomBar({ outbox, updateWaiting: true, sending: false })?.does).toBe('reload')
+    expect(chooseAlert({ outbox, updateWaiting: true, sending: false })?.does).toBe('reload')
   })
 
   test('with a Log still on its way, the update waits too: it is on no server yet and a reload would drop it', () => {
-    expect(bottomBar({ outbox: nothingUnsaved, updateWaiting: true, sending: true })).toBeNull()
+    expect(chooseAlert({ outbox: nothingUnsaved, updateWaiting: true, sending: true })).toBeNull()
   })
 
   test('a Log on its way does not hide the Unsaved alert, which is about the ones that already stopped', () => {
     const outbox = held(nothingUnsaved, { save: tap(), why: 'held' })
 
-    expect(bottomBar({ outbox, updateWaiting: true, sending: true })?.does).toBe('retry')
+    expect(chooseAlert({ outbox, updateWaiting: true, sending: true })?.does).toBe('retry')
+  })
+})
+
+describe('the answer to a Save', () => {
+  test('a 401 keeps the Log for signing back in, because nobody chose to leave', () => {
+    const outbox = answeredSave(nothingUnsaved, { save: tap(), landing: 'signedOut', athleteLeft: false })
+
+    expect(unsaved(outbox)).toEqual([tap()])
+  })
+
+  test('landing clears what was held for the same target', () => {
+    const outbox = held(nothingUnsaved, { save: tap(), why: 'held' })
+
+    expect(answeredSave(outbox, { save: tap(), landing: 'landed', athleteLeft: false })).toEqual(nothingUnsaved)
+  })
+
+  test('arriving after the athlete signed out or deleted the account holds nothing, so no other account can save it', () => {
+    const outbox = answeredSave(nothingUnsaved, { save: tap(), landing: 'signedOut', athleteLeft: true })
+
+    expect(outbox).toEqual(nothingUnsaved)
+  })
+
+  test('arriving after the athlete left does not touch what the next athlete has held', () => {
+    const next = held(nothingUnsaved, { save: tap(), why: 'held' })
+
+    expect(answeredSave(next, { save: tap(), landing: 'landed', athleteLeft: true })).toEqual(next)
   })
 })
 
@@ -277,10 +307,10 @@ describe('being signed out mid-training, and signing back in', () => {
   })
 
   test('once signed in, the one button sends every Log, and when they land a waiting update surfaces', () => {
-    expect(bottomBar({ outbox: signedOut, updateWaiting: true, sending: false })?.does).toBe('retry')
+    expect(chooseAlert({ outbox: signedOut, updateWaiting: true, sending: false })?.does).toBe('retry')
 
     const settled = unsaved(signedOut).reduce(landed, signedOut)
 
-    expect(bottomBar({ outbox: settled, updateWaiting: true, sending: false })?.does).toBe('reload')
+    expect(chooseAlert({ outbox: settled, updateWaiting: true, sending: false })?.does).toBe('reload')
   })
 })

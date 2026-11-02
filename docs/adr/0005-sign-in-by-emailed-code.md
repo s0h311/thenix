@@ -26,7 +26,17 @@ so a resend can only ever issue a new code, and only the newest one works. An un
 still creates the user on the first successful sign-in.
 
 A code lasts 10 minutes rather than the plugin's default of 5, because mail can be slow on a
-weak signal. It allows the plugin's default of 3 wrong tries.
+weak signal. It allows 3 wrong tries, the plugin's default, set explicitly through
+`allowedAttempts` from the same shared constant the page counts up to.
+
+The page counts wrong tries itself, because the plugin reports the limit one try late: it answers
+`INVALID_OTP` to the third wrong try and `TOO_MANY_ATTEMPTS` only to the fourth. Left alone, the
+third "try again" would offer a code that can no longer work. The signing-in lib counts each
+`INVALID_OTP` for the current code and treats the third as too many tries. The count resets when a
+new code is sent or the email changes, and not when a send fails, since the old code then still
+stands. A check that gets no answer about the code is not counted. The count is only for what the
+page says, and it lives in memory. The server still enforces the limit, and `TOO_MANY_ATTEMPTS`
+is still handled for when the page's count is behind, as with tries made in another tab.
 
 The mail is sent without being awaited, so response time does not reveal anything about the
 send. The plugin also swallows a rejected send when it does await one. Either way a mail that
