@@ -83,7 +83,7 @@ async function parsed(response: Response): Promise<unknown> {
 }
 
 /** Being signed out, said where the athlete is standing — with their paste still in the box. */
-const ENDED =
+const SIGNED_OUT_SAID =
   'You were signed out, so nothing was imported. Your paste is still here. Sign in again, then read it back.'
 
 /**
@@ -124,7 +124,7 @@ function FromYourCoach() {
               at: 'stalled',
               said:
                 answer.at === 'signedOut'
-                  ? ENDED
+                  ? SIGNED_OUT_SAID
                   : 'The Week could not be read back. You are still signed in — this one is the connection. Nothing was imported, so try again when you have one.',
             },
     )
@@ -157,7 +157,7 @@ function FromYourCoach() {
               // with nothing logged against it yet, which costs nothing.
               said:
                 answer.at === 'signedOut'
-                  ? ENDED
+                  ? SIGNED_OUT_SAID
                   : `Week ${number} may not have been saved — the server never answered. Check your Weeks, and import it again if it is not there.`,
             },
     )

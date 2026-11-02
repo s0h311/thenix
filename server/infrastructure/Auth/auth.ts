@@ -5,7 +5,7 @@ import { sendMail } from '../Mail/client.ts'
 import { getBaseUrl } from '../Utils/getBaseUrl.ts'
 import { betterAuth } from 'better-auth'
 import { emailOTP } from 'better-auth/plugins/email-otp'
-import { SIGN_IN_CODE_TTL_MINUTES } from '../../../shared/signIn.ts'
+import { SIGN_IN_CODE_TTL_MINUTES, SIGN_IN_CODE_WRONG_TRIES } from '../../../shared/signIn.ts'
 import { logError } from '../Utils/logging.ts'
 import { signInMail } from './signInMail.ts'
 
@@ -41,6 +41,7 @@ export const auth = betterAuth({
   plugins: [
     emailOTP({
       expiresIn: SIGN_IN_CODE_TTL_MINUTES * 60,
+      allowedAttempts: SIGN_IN_CODE_WRONG_TRIES,
       storeOTP: 'hashed',
       sendVerificationOTP: async ({ email, otp, type }) => {
         // The endpoint also takes other types, and this mail says sign-in.

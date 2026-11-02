@@ -98,6 +98,23 @@ export function landed(outbox: Outbox, save: Save): Outbox {
 }
 
 /**
+ * The server's answer to a Save, put to the outbox. `athleteLeft` is the athlete having
+ * signed out or deleted the account since it was sent: the outbox was emptied then so that
+ * no other account can save these Logs, and a late answer must not put one back. Being
+ * signed out by the server is not leaving, and that Log is kept to save after signing in.
+ */
+export function answeredSave(
+  outbox: Outbox,
+  { save, landing, athleteLeft }: { save: Save; landing: Landing; athleteLeft: boolean },
+): Outbox {
+  if (athleteLeft) {
+    return outbox
+  }
+
+  return landing === 'landed' ? landed(outbox, save) : held(outbox, { save, why: landing })
+}
+
+/**
  * Everything still to be tried again, oldest first — which is everything but the
  * refused. Sending one of those again spends the athlete's one tap on a Save that
  * cannot land, and leaves the count where it was.
@@ -111,13 +128,13 @@ export function unsaved(outbox: Outbox): Save[] {
 /**
  * The refused let go of. It is the only way the bar clears once the server will not
  * take what is left: without it the warning is pinned over every training screen for
- * the rest of the session, counting Logs that nothing can do anything about.
+ * the rest of the Day, counting Logs that nothing can do anything about.
  */
 export function dismissed(outbox: Outbox): Outbox {
   return Object.fromEntries(Object.entries(outbox).filter(([, one]) => one.why !== 'refused'))
 }
 
-/** The warning bar, in words: what is held, and what the one button does about it. */
+/** The bar, in words: what it says, what its one button reads, and what that button does. */
 export type Alert = Readonly<{ said: string; action: string; does: 'retry' | 'dismiss' | 'reload' }>
 
 /**
@@ -169,12 +186,12 @@ export function unsavedAlert(outbox: Outbox): Alert | null {
 const UPDATE_ALERT: Alert = { said: 'A new version of thenix is ready.', action: 'Reload', does: 'reload' }
 
 /**
- * The one bar at the foot of the screen, and which alert it is. Unsaved comes first
+ * Which alert the one bar at the foot of the screen shows, if any. Unsaved comes first
  * and the update is never chosen beside it: a reload loses whatever is only on this
  * phone, so the offer waits until nothing is, and surfaces by itself the moment the
  * last Log lands. The update is told apart by what it does, not by a second bar.
  */
-export function bottomBar({
+export function chooseAlert({
   outbox,
   updateWaiting,
   sending,

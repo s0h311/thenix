@@ -1,5 +1,20 @@
 import { Button } from './Button.tsx'
 
+const TONES = {
+  warning: {
+    role: 'alert',
+    box: 'border-warning-line bg-warning-soft',
+    text: 'text-warning-ink',
+    button: 'destructive',
+  },
+  neutral: {
+    role: 'status',
+    box: 'border-hairline bg-raised',
+    text: 'text-ink',
+    button: 'primary',
+  },
+} as const
+
 /**
  * The one bar at the foot of the screen. It pins directly above the tab bar rather
  * than sitting above the content, because a Day is a long scroll and a message at
@@ -24,7 +39,7 @@ export function BottomBar({
   action: string
   onAct: () => void
 }) {
-  const warning = tone === 'warning'
+  const look = TONES[tone]
 
   return (
     <>
@@ -37,12 +52,12 @@ export function BottomBar({
 
       <div className='fixed inset-x-0 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] z-40 px-4 pb-2 md:bottom-0 md:pb-[calc(0.75rem_+_env(safe-area-inset-bottom))]'>
         <section
-          role={warning ? 'alert' : 'status'}
-          className={`mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-lg ${warning ? 'border-warning-line bg-warning-soft' : 'border-hairline bg-raised'}`}
+          role={look.role}
+          className={`mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-lg ${look.box}`}
         >
-          <p className={`text-label font-semibold ${warning ? 'text-warning-ink' : 'text-ink'}`}>{said}</p>
+          <p className={`text-label font-semibold ${look.text}`}>{said}</p>
           <Button
-            tone={warning ? 'destructive' : 'primary'}
+            tone={look.button}
             onClick={onAct}
           >
             {action}

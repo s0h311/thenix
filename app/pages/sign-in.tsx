@@ -9,23 +9,27 @@ import { TextInput } from '../components/UI/Field.tsx'
 import { authClient } from '../libs/Auth/authClient.ts'
 import {
   answered,
-  asked,
+  awaitingAnswer,
   checkOutcome,
   differentEmail,
   screenOf,
   sendOutcome,
   startSigningIn,
 } from '../libs/Auth/signingIn.ts'
-import type { Alert, Failure } from '../libs/Auth/signingIn.ts'
+import type { Failure, Outcome } from '../libs/Auth/signingIn.ts'
 
 export const Route = createFileRoute('/sign-in')({
   component: SignInPage,
 })
 
+type AuthAnswer = { error: { status: number; code?: string | undefined } | null }
+
 /** The request never completing is an answer too: without it the button stays on "Sending…". */
-async function failureOf(call: Promise<{ error: Failure | null }>): Promise<Failure | null> {
+async function failureOf(call: Promise<AuthAnswer>): Promise<Failure | null> {
   try {
-    return (await call).error
+    const { error } = await call
+
+    return error === null ? null : { status: error.status, reason: error.code }
   } catch {
     return { status: null }
   }
@@ -39,30 +43,36 @@ function SignInPage() {
   const [code, setCode] = useState('')
   const screen = screenOf(state)
 
-  async function sendCode(event?: FormEvent) {
+  async function ask(
+    event: FormEvent | undefined,
+    { call, outcomeOf }: { call: () => Promise<AuthAnswer>; outcomeOf: (failure: Failure | null) => Outcome },
+  ) {
     event?.preventDefault()
-    setState((current) => asked(current, email))
+    setState((current) => awaitingAnswer(current, email))
 
-    const outcome = sendOutcome(await failureOf(authClient.emailOtp.sendVerificationOtp({ email, type: 'sign-in' })))
+    const outcome = outcomeOf(await failureOf(call()))
 
-    if (outcome === 'sent') {
+    if (outcome === 'sent' || outcome === 'wrongCode') {
       setCode('')
     }
 
     setState((current) => answered(current, outcome))
+
+    return outcome
+  }
+
+  async function sendCode(event?: FormEvent) {
+    await ask(event, {
+      call: () => authClient.emailOtp.sendVerificationOtp({ email, type: 'sign-in' }),
+      outcomeOf: sendOutcome,
+    })
   }
 
   async function checkCode(event: FormEvent) {
-    event.preventDefault()
-    setState((current) => asked(current, email))
-
-    const outcome = checkOutcome(await failureOf(authClient.signIn.emailOtp({ email, otp: code.trim() })))
-
-    if (outcome === 'wrongCode') {
-      setCode('')
-    }
-
-    setState((current) => answered(current, outcome))
+    const outcome = await ask(event, {
+      call: () => authClient.signIn.emailOtp({ email, otp: code.trim() }),
+      outcomeOf: checkOutcome,
+    })
 
     if (outcome === 'signedIn') {
       // Every read so far was answered as signed out, and those answers are no longer true.
@@ -73,15 +83,15 @@ function SignInPage() {
 
   if (screen.at === 'signedIn') {
     return (
-      <Shell>
+      <SignInCard>
         <p className='text-ink-muted'>One moment…</p>
-      </Shell>
+      </SignInCard>
     )
   }
 
   if (screen.at === 'email') {
     return (
-      <Shell>
+      <SignInCard>
         <h1 className='text-title'>Sign in</h1>
         <p className='text-ink-muted'>Your email address is all you need. No password, and no separate sign up.</p>
         <form
@@ -107,19 +117,22 @@ function SignInPage() {
             {screen.button}
           </Button>
         </form>
-        <Said alert={screen.alert} />
-      </Shell>
+        <Said said={screen.said} />
+      </SignInCard>
     )
   }
 
+  // One primary action on a screen: a failed send points at sending again, not at the field.
+  const sendsNew = screen.next === 'sendNew' || screen.next === 'retry'
+
   return (
-    <Shell>
+    <SignInCard>
       <h1 className='text-title break-words'>{screen.heading}</h1>
       <p className='text-ink-muted'>
         {screen.lifetime}
         {screen.onlyNewest ? ' Only the newest code works.' : ''}
       </p>
-      {screen.takesCode && (
+      {screen.next !== 'sendNew' && (
         <form
           onSubmit={(event) => void checkCode(event)}
           className='space-y-4'
@@ -137,7 +150,7 @@ function SignInPage() {
           />
           <Button
             type='submit'
-            tone='primary'
+            tone={sendsNew ? 'secondary' : 'primary'}
             disabled={screen.busy}
             className='w-full'
           >
@@ -145,9 +158,9 @@ function SignInPage() {
           </Button>
         </form>
       )}
-      <Said alert={screen.alert} />
+      <Said said={screen.said} />
       <Button
-        tone={screen.takesCode ? 'secondary' : 'primary'}
+        tone={sendsNew ? 'primary' : 'secondary'}
         disabled={screen.busy}
         className='w-full'
         onClick={() => void sendCode()}
@@ -162,12 +175,12 @@ function SignInPage() {
       >
         Use a different email
       </Button>
-    </Shell>
+    </SignInCard>
   )
 }
 
-function Said({ alert }: Readonly<{ alert: Alert | null }>) {
-  if (alert === null) {
+function Said({ said }: Readonly<{ said: string | null }>) {
+  if (said === null) {
     return null
   }
 
@@ -176,12 +189,12 @@ function Said({ alert }: Readonly<{ alert: Alert | null }>) {
       role='alert'
       className='rounded-lg border border-warning-line bg-warning-soft px-3 py-2 text-label text-warning-ink'
     >
-      {alert.said}
+      {said}
     </p>
   )
 }
 
-function Shell({ children }: Readonly<{ children: ReactNode }>) {
+function SignInCard({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <Card className='mx-auto max-w-sm space-y-4 text-center'>
       <Logo className='mx-auto h-12 w-auto' />
