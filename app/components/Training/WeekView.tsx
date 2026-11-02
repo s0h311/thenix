@@ -640,7 +640,7 @@ function DayStrip({
     // the Day asks for, which is what a rest Day having none has to mean.
     <nav
       aria-label='The Days of this Week'
-      className='sticky top-0 z-30 -mx-4 overflow-x-auto border-b border-hairline bg-page px-4 py-2'
+      className='sticky top-[env(safe-area-inset-top)] z-30 -mx-4 overflow-x-auto border-b border-hairline bg-page px-4 py-2'
     >
       <div className='flex gap-2'>
         {pills.map((pill) => (
