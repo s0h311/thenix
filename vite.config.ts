@@ -4,6 +4,7 @@ import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
+import { injectServiceWorker } from './scripts/injectServiceWorker.js'
 
 const IS_TEST = process.env['NODE_ENV'] === 'test'
 
@@ -35,5 +36,13 @@ export default defineConfig({
     }),
     tailwindcss(),
     ...(IS_TEST ? [] : [nitro()]), // TODO temporary, see https://github.com/nitrojs/nitro/issues/3659
+    {
+      // Nitro's static handler serves the size and ETag it read when bundling the server, so
+      // the worker has to be final by then: see docs/adr/0006-hand-written-service-worker.md.
+      name: 'thenix:inject-service-worker',
+      apply: 'build',
+      applyToEnvironment: (environment) => environment.name === 'nitro',
+      buildStart: () => injectServiceWorker(),
+    },
   ],
 })

@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { Outlet, createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TabBar } from '../components/Shell/TabBar.tsx'
+import { useServiceWorkerRegistration } from '../components/Shell/useServiceWorkerRegistration.ts'
 import { BRAND_HEAD_LINKS } from '../libs/Brand/brand.ts'
 
 export const Route = createRootRoute({
@@ -38,6 +39,8 @@ const queryClient = new QueryClient({
 })
 
 function RootComponent() {
+  useServiceWorkerRegistration()
+
   return (
     <RootDocument>
       <QueryClientProvider client={queryClient}>
