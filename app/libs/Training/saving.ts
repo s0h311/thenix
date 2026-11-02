@@ -29,7 +29,7 @@ export type Blocked = Exclude<Landing, 'landed'>
  *
  * This is a module because the screen had one: anything but a 2xx was held and said
  * as "still on this phone. Check your connection.", and the one button on the bar
- * sent it again. An ended session was therefore reported as no signal, and the tap
+ * sent it again. Being signed out was therefore reported as no signal, and the tap
  * that was supposed to fix it could not. Worse, a Save the server will never take —
  * a Log tapped in a basement gym against an Exercise a Revision has since dropped,
  * which the server will not write to — was held for good: the count never fell and
@@ -59,7 +59,7 @@ export function landingOf({ status }: { status: number | null }): Landing {
  * Whether the server's own record moved, and so has to be read back. Not every
  * Landing is worth a read, and the two that are not are exactly the two where a
  * read can only fail: a Save held in a basement gym never reached the server, and
- * one stopped by an ended session never got past the door. Asking anyway is how a
+ * one stopped by being signed out never got past the door. Asking anyway is how a
  * tap with no signal ends with the Day the athlete is training replaced by "could
  * not be read" — the read fails, and a failed read is louder than the Save was.
  *
@@ -74,8 +74,8 @@ export function movedOn(landing: Landing): boolean {
 /**
  * What the phone has taken and the server has not: keyed by what each Save records,
  * and carrying why the server has not got it. The reason rides along because it is
- * the whole of what the athlete can do next — a connection is waited out, a session
- * is signed back into, and a refusal is only ever read and let go of.
+ * the whole of what the athlete can do next — a connection is waited out, being signed
+ * out is signed back in from, and a refusal is only ever read and let go of.
  */
 export type Outbox = Readonly<Record<string, { save: Save; why: Blocked }>>
 
@@ -145,7 +145,7 @@ export function unsavedAlert(outbox: Outbox): Alert | null {
 
   if (all.some((unsent) => unsent.why === 'signedOut')) {
     return {
-      said: `${count} ${one ? 'Log is' : 'Logs are'} still on this phone. Your session ended — sign in again, then save ${one ? 'it' : 'them'}.`,
+      said: `${count} ${one ? 'Log is' : 'Logs are'} still on this phone. You were signed out — sign in again, then save ${one ? 'it' : 'them'}.`,
       action: one ? 'Save it now' : 'Save them now',
       does: 'retry',
     }

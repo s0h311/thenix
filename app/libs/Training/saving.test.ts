@@ -113,7 +113,7 @@ describe('what became of a Save the phone sent', () => {
     expect(landingOf({ status: 503 })).toBe('held')
   })
 
-  test('an ended session is said apart from the connection, because signing in is the fix', () => {
+  test('being signed out is said apart from the connection, because signing in is the fix', () => {
     expect(landingOf({ status: 401 })).toBe('signedOut')
   })
 
@@ -122,23 +122,23 @@ describe('what became of a Save the phone sent', () => {
   })
 })
 
-describe('a Save the session ended under', () => {
-  test('is said as the session and not as the signal, because signing in is the fix', () => {
+describe('a Save stopped by being signed out', () => {
+  test('is said as being signed out and not as the signal, because signing in is the fix', () => {
     expect(unsavedAlert(held(nothingUnsaved, { save: tap(), why: 'signedOut' }))).toEqual({
-      said: '1 Log is still on this phone. Your session ended — sign in again, then save it.',
+      said: '1 Log is still on this phone. You were signed out — sign in again, then save it.',
       action: 'Save it now',
       does: 'retry',
     })
   })
 
-  test('wins over the connection when both are held: nothing lands until the session is back', () => {
+  test('wins over the connection when both are held: nothing lands until the athlete is back in', () => {
     const both = held(held(nothingUnsaved, { save: tap(), why: 'held' }), {
       save: tap({ exerciseKey: 'rows' }),
       why: 'signedOut',
     })
 
     expect(unsavedAlert(both)?.said).toBe(
-      '2 Logs are still on this phone. Your session ended — sign in again, then save them.',
+      '2 Logs are still on this phone. You were signed out — sign in again, then save them.',
     )
   })
 
@@ -212,7 +212,7 @@ describe('what a Save means for reading the Week back', () => {
     expect(movedOn('held')).toBe(false)
   })
 
-  test('a session that ended moved nothing, and asking again only asks who is asking', () => {
+  test('being signed out moved nothing, and asking again only asks who is asking', () => {
     expect(movedOn('signedOut')).toBe(false)
   })
 })

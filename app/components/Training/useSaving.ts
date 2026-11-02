@@ -10,7 +10,7 @@ import type { Logged, Noted } from '../../libs/Training/logging.ts'
  * is let a phone in a basement gym go on showing a set as recorded when it is not.
  * A Save that does not land is held and said out loud, and trying again is one tap.
  * Why it did not land is held with it, because "check your connection" is no help to
- * an athlete whose session ended, and no help at all against a Save no retry can fix.
+ * an athlete who was signed out, and no help at all against a Save no retry can fix.
  */
 export function useSaving({ weekNumber, refresh }: { weekNumber: number; refresh: string }) {
   const queryClient = useQueryClient()
