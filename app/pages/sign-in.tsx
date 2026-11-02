@@ -1,79 +1,183 @@
 import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Logo } from '../components/Brand/Logo.tsx'
 import { Button } from '../components/UI/Button.tsx'
 import { Card } from '../components/UI/Card.tsx'
 import { TextInput } from '../components/UI/Field.tsx'
 import { authClient } from '../libs/Auth/authClient.ts'
+import {
+  answered,
+  asked,
+  checkOutcome,
+  differentEmail,
+  screenOf,
+  sendOutcome,
+  startSigningIn,
+} from '../libs/Auth/signingIn.ts'
+import type { Alert, Failure } from '../libs/Auth/signingIn.ts'
 
 export const Route = createFileRoute('/sign-in')({
   component: SignInPage,
 })
 
-type Status = 'asking' | 'sending' | 'sent' | 'failed'
+/** The request never completing is an answer too: without it the button stays on "Sending…". */
+async function failureOf(call: Promise<{ error: Failure | null }>): Promise<Failure | null> {
+  try {
+    return (await call).error
+  } catch {
+    return { status: null }
+  }
+}
 
 function SignInPage() {
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const [state, setState] = useState(startSigningIn)
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<Status>('asking')
+  const [code, setCode] = useState('')
+  const screen = screenOf(state)
 
-  async function requestLink(event: FormEvent) {
-    event.preventDefault()
-    setStatus('sending')
+  async function sendCode(event?: FormEvent) {
+    event?.preventDefault()
+    setState((current) => asked(current, email))
 
-    const { error } = await authClient.signIn.magicLink({ email, callbackURL: '/' })
+    const outcome = sendOutcome(await failureOf(authClient.emailOtp.sendVerificationOtp({ email, type: 'sign-in' })))
 
-    setStatus(error ? 'failed' : 'sent')
+    if (outcome === 'sent') {
+      setCode('')
+    }
+
+    setState((current) => answered(current, outcome))
   }
 
-  if (status === 'sent') {
+  async function checkCode(event: FormEvent) {
+    event.preventDefault()
+    setState((current) => asked(current, email))
+
+    const outcome = checkOutcome(await failureOf(authClient.signIn.emailOtp({ email, otp: code.trim() })))
+
+    if (outcome === 'wrongCode') {
+      setCode('')
+    }
+
+    setState((current) => answered(current, outcome))
+
+    if (outcome === 'signedIn') {
+      // Every read so far was answered as signed out, and those answers are no longer true.
+      queryClient.clear()
+      await router.navigate({ to: '/' })
+    }
+  }
+
+  if (screen.at === 'signedIn') {
     return (
       <Shell>
-        <h1 className='text-title'>Check your email</h1>
-        <p className='text-ink-muted'>
-          A sign-in link is on its way to <span className='font-semibold text-ink'>{email}</span>. It works once and
-          expires in 15 minutes.
-        </p>
+        <p className='text-ink-muted'>One moment…</p>
+      </Shell>
+    )
+  }
+
+  if (screen.at === 'email') {
+    return (
+      <Shell>
+        <h1 className='text-title'>Sign in</h1>
+        <p className='text-ink-muted'>Your email address is all you need. No password, and no separate sign up.</p>
+        <form
+          onSubmit={(event) => void sendCode(event)}
+          className='space-y-4'
+        >
+          <TextInput
+            label='Email address'
+            type='email'
+            required
+            autoComplete='email'
+            inputMode='email'
+            placeholder='you@example.com'
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <Button
+            type='submit'
+            tone='primary'
+            disabled={screen.busy}
+            className='w-full'
+          >
+            {screen.button}
+          </Button>
+        </form>
+        <Said alert={screen.alert} />
       </Shell>
     )
   }
 
   return (
     <Shell>
-      <h1 className='text-title'>Sign in</h1>
-      <p className='text-ink-muted'>Your email address is all you need. No password, and no separate sign up.</p>
-      <form
-        onSubmit={requestLink}
-        className='space-y-4'
-      >
-        <TextInput
-          label='Email address'
-          type='email'
-          required
-          autoComplete='email'
-          inputMode='email'
-          placeholder='you@example.com'
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-        <Button
-          type='submit'
-          tone='primary'
-          disabled={status === 'sending'}
-          className='w-full'
+      <h1 className='text-title break-words'>{screen.heading}</h1>
+      <p className='text-ink-muted'>
+        {screen.lifetime}
+        {screen.onlyNewest ? ' Only the newest code works.' : ''}
+      </p>
+      {screen.takesCode && (
+        <form
+          onSubmit={(event) => void checkCode(event)}
+          className='space-y-4'
         >
-          {status === 'sending' ? 'Sending…' : 'Send me a link'}
-        </Button>
-      </form>
-      {status === 'failed' && (
-        <p
-          role='alert'
-          className='rounded-lg border border-warning-line bg-warning-soft px-3 py-2 text-label text-warning-ink'
-        >
-          That link could not be sent. Try again.
-        </p>
+          <TextInput
+            label='Sign-in code'
+            type='text'
+            required
+            autoComplete='one-time-code'
+            inputMode='numeric'
+            pattern='[0-9]*'
+            maxLength={6}
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+          />
+          <Button
+            type='submit'
+            tone='primary'
+            disabled={screen.busy}
+            className='w-full'
+          >
+            Sign in
+          </Button>
+        </form>
       )}
+      <Said alert={screen.alert} />
+      <Button
+        tone={screen.takesCode ? 'secondary' : 'primary'}
+        disabled={screen.busy}
+        className='w-full'
+        onClick={() => void sendCode()}
+      >
+        Send a new code
+      </Button>
+      <Button
+        tone='ghost'
+        disabled={screen.busy}
+        className='w-full'
+        onClick={() => setState(differentEmail)}
+      >
+        Use a different email
+      </Button>
     </Shell>
+  )
+}
+
+function Said({ alert }: Readonly<{ alert: Alert | null }>) {
+  if (alert === null) {
+    return null
+  }
+
+  return (
+    <p
+      role='alert'
+      className='rounded-lg border border-warning-line bg-warning-soft px-3 py-2 text-label text-warning-ink'
+    >
+      {alert.said}
+    </p>
   )
 }
 

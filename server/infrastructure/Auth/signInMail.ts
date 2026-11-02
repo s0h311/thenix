@@ -1,23 +1,19 @@
+import { SIGN_IN_CODE_TTL_MINUTES } from '../../../shared/signIn.ts'
 import { EMAIL_FOOTER } from '../Mail/consts.ts'
 import type { MailData } from '../Mail/types.ts'
 
-/** How long a requested link stays usable. The copy below quotes it, so they move together. */
-export const SIGN_IN_LINK_TTL_MINUTES = 15
-
-type SignInLink = {
+type SignInCode = {
   email: string
-  url: string
+  code: string
 }
 
-export function signInMail({ email, url }: SignInLink): MailData {
+export function signInMail({ email, code }: SignInCode): MailData {
   return {
     recipients: [email],
-    subject: 'Your sign-in link for thenix',
-    text: `Tap the link to sign in:
+    subject: `${code} is your thenix sign-in code`,
+    text: `${code}
 
-${url}
-
-The link works once and expires in ${SIGN_IN_LINK_TTL_MINUTES} minutes. If you did not ask to sign in, ignore this mail.
+It works once and expires in ${SIGN_IN_CODE_TTL_MINUTES} minutes. If you did not ask to sign in, ignore this mail.
 
 ${EMAIL_FOOTER}`,
   }

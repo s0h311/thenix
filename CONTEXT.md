@@ -125,6 +125,20 @@ The coach's decision about which lever moves next Week. It appears in Week prose
 never something the app computes.
 _Avoid_: Progress
 
+### Signing in
+
+**Sign-in code**:
+The 6-digit code emailed to the athlete and typed into the app. It works once, expires in
+10 minutes, and only the newest one works. Email alone is enough: there is no password and no
+separate sign-up.
+_Avoid_: OTP, magic link, password, token
+
+**Signed out**:
+The athlete not being known to the server, whether they signed out themselves or were signed
+out. It is what the screen says when that stops a read or a Save. "Session" is avoided in UI
+and domain language, because it is already a synonym to avoid for **Day**.
+_Avoid_: Session ended, logged out, expired
+
 ### Moving data
 
 **Import**:

@@ -82,9 +82,9 @@ async function parsed(response: Response): Promise<unknown> {
   }
 }
 
-/** The session having ended, said where the athlete is standing — with their paste still in the box. */
+/** Being signed out, said where the athlete is standing — with their paste still in the box. */
 const ENDED =
-  'Your session has ended, so nothing was imported. Your paste is still here. Sign in again, then read it back.'
+  'You were signed out, so nothing was imported. Your paste is still here. Sign in again, then read it back.'
 
 /**
  * The weekly ritual, in one place and organised by direction: what arrives from the
