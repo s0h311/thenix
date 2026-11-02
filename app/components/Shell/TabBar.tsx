@@ -42,8 +42,9 @@ export function TabBar() {
       aria-label='Sections'
       // Fixed to the bottom of the viewport on a phone, where a thumb is; the
       // inset padding keeps it clear of the home indicator. `md:static` drops
-      // every one of those positions at once.
-      className='fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-raised pb-[env(safe-area-inset-bottom)] md:static md:border-t-0 md:border-b md:pb-0'
+      // every one of those positions at once, and at the top of a tablet it is the
+      // status bar it has to clear instead.
+      className='fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-raised pb-[env(safe-area-inset-bottom)] md:static md:border-t-0 md:border-b md:pt-[env(safe-area-inset-top)] md:pb-0'
     >
       <div className='mx-auto flex max-w-3xl items-stretch md:items-center md:gap-6 md:px-4'>
         {/* A mark, not a destination: Today is a tab away, and a second link to
